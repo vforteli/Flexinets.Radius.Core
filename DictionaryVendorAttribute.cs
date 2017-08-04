@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Flexinets.Radius.Core
-{    
-    public class DictionaryVendorAttribute
+{
+    public class DictionaryVendorAttribute : DictionaryAttribute
     {
         public readonly UInt32 VendorId;
-        public readonly String Name;
-        public readonly UInt32 Code;
-        public readonly String Type;
+        public readonly UInt32 VendorCode;
 
 
         /// <summary>
@@ -19,14 +13,12 @@ namespace Flexinets.Radius.Core
         /// </summary>
         /// <param name="vendorId"></param>
         /// <param name="name"></param>
-        /// <param name="code"></param>
+        /// <param name="vendorCode"></param>        
         /// <param name="type"></param>
-        public DictionaryVendorAttribute(UInt32 vendorId, String name, UInt32 code, String type)
+        public DictionaryVendorAttribute(UInt32 vendorId, String name, UInt32 vendorCode, String type) : base(name, 26, type)
         {
             VendorId = vendorId;
-            Name = name;
-            Code = code;
-            Type = type;
+            VendorCode = vendorCode;
         }
     }
 }

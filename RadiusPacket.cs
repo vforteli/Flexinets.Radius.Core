@@ -115,7 +115,7 @@ namespace Flexinets.Radius.Core
                     if (typecode == 26) // VSA
                     {
                         var vsa = new VendorSpecificAttribute(contentBytes);
-                        var vendorAttributeDefinition = dictionary.VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vsa.VendorId && o.Code == vsa.VendorCode);
+                        var vendorAttributeDefinition = dictionary.VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vsa.VendorId && o.VendorCode == vsa.VendorCode);
                         if (vendorAttributeDefinition == null)
                         {
                             _log.Info($"Unknown vsa: {vsa.VendorId}:{vsa.VendorCode}");
@@ -350,7 +350,7 @@ namespace Flexinets.Radius.Core
                             var vendorId = BitConverter.GetBytes(vendorAttributeType.VendorId);
                             Array.Reverse(vendorId);
                             Buffer.BlockCopy(vendorId, 0, headerBytes, 2, 4);
-                            headerBytes[6] = (Byte)vendorAttributeType.Code;
+                            headerBytes[6] = (Byte)vendorAttributeType.VendorCode;
                             headerBytes[7] = (Byte)(2 + contentBytes.Length);  // length of the vsa part
                         }
                         else
