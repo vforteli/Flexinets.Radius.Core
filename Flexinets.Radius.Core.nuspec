@@ -13,5 +13,11 @@
     <releaseNotes>Radius core functionality moved to this package.</releaseNotes>
     <copyright>Copyright 2017 Verner Fortelius</copyright>
     <tags>Radius RadiusServer RadiusClient rfc2865 rfc2866 Authentication Accounting</tags>
+    <contentFiles>
+      <files include="radius.dictionary" buildAction="None" copyToOutput="true" />
+    </contentFiles>
   </metadata>
+  <files>
+    <file src="radius.dictionary" target="content" />
+  </files>
 </package>

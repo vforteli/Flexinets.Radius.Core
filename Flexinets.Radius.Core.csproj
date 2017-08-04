@@ -56,7 +56,7 @@
     <Compile Include="VendorSpecificAttribute.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="dictionary">
+    <None Include="radius.dictionary">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
