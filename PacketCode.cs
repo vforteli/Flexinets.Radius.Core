@@ -10,6 +10,8 @@
         AccessChallenge = 11,
         StatusServer = 12,
         StatusClient = 13,
-        DisconnectRequest = 40
+        DisconnectRequest = 40,
+        DisconnectAck = 41,
+        DisconnectNak = 42
     }
 }
