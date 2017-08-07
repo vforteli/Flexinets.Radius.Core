@@ -25,11 +25,7 @@ namespace Flexinets.Radius.Core
             get;
             private set;
         }
-        public Byte[] Authenticator
-        {
-            get;
-            internal set;
-        }
+        public Byte[] Authenticator { get; internal set; } = new Byte[16];
         public IDictionary<String, List<Object>> Attributes { get; set; } = new Dictionary<String, List<Object>>();
         public Byte[] SharedSecret
         {
@@ -50,16 +46,17 @@ namespace Flexinets.Radius.Core
         /// <param name="code"></param>
         /// <param name="identifier"></param>
         /// <param name="secret"></param>
-        /// <param name="authenticator">Leave blank for random authenticator</param>
+        /// <param name="authenticator">Set authenticator for testing</param>
         public RadiusPacket(PacketCode code, Byte identifier, String secret, Byte[] authenticator = null)
         {
             Code = code;
             Identifier = identifier;
             SharedSecret = Encoding.UTF8.GetBytes(secret);
-            Authenticator = authenticator;
-            if (Authenticator == null)
+            Authenticator = authenticator ?? new Byte[16];
+
+            // Generate random authenticator for access request packets
+            if (Authenticator == null && (Code == PacketCode.AccessRequest || Code == PacketCode.StatusServer))
             {
-                Authenticator = new Byte[16];
                 using (var csp = RandomNumberGenerator.Create())
                 {
                     csp.GetNonZeroBytes(Authenticator);
@@ -77,8 +74,10 @@ namespace Flexinets.Radius.Core
         public static IRadiusPacket Parse(Byte[] packetBytes, RadiusDictionary dictionary, Byte[] sharedSecret)
         {
             // Check the packet length and make sure its valid
-            Array.Reverse(packetBytes, 2, 2);
-            var packetLength = BitConverter.ToUInt16(packetBytes, 2);
+            var lengthBytes = new Byte[2];
+            lengthBytes[0] = packetBytes[3];
+            lengthBytes[1] = packetBytes[2];
+            var packetLength = BitConverter.ToUInt16(lengthBytes, 0);
             if (packetBytes.Length != packetLength)
             {
                 var message = $"Packet length does not match, expected: {packetLength}, actual: {packetBytes.Length}";
@@ -91,10 +90,17 @@ namespace Flexinets.Radius.Core
                 SharedSecret = sharedSecret,
                 Identifier = packetBytes[1],
                 Code = (PacketCode)packetBytes[0],
-                Authenticator = new Byte[16]
             };
 
             Buffer.BlockCopy(packetBytes, 4, radiusPacket.Authenticator, 0, 16);
+
+            if (radiusPacket.Code == PacketCode.AccountingRequest)
+            {
+                if (!radiusPacket.Authenticator.SequenceEqual(CalculateAccountingRequestAuthenticator(radiusPacket.SharedSecret, packetBytes)))
+                {
+                    throw new InvalidOperationException($"Invalid request authenticator in packet {radiusPacket.Identifier}, check secret?");
+                }
+            }
 
             // The rest are attribute value pairs
             var position = 20;
@@ -284,28 +290,6 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
-        /// Validates a message authenticator if one exists in the packet
-        /// Message-Authenticator = HMAC-MD5 (Type, Identifier, Length, Request Authenticator, Attributes)
-        /// The HMAC-MD5 function takes in two arguments:
-        /// The payload of the packet, which includes the 16 byte Message-Authenticator field filled with zeros
-        /// The shared secret
-        /// https://www.ietf.org/rfc/rfc2869.txt
-        /// </summary>
-        /// <returns></returns>
-        public static Byte[] CalculateMessageAuthenticator(IRadiusPacket packet, RadiusDictionary dictionary)
-        {
-            // Clone the original packet so we can change the message authenticator to zeros
-            var checkPacket = Parse(packet.GetBytes(dictionary), dictionary, packet.SharedSecret);
-            checkPacket.Attributes["Message-Authenticator"][0] = new Byte[16];
-
-            using (var md5 = new HMACMD5(checkPacket.SharedSecret))
-            {
-                return md5.ComputeHash(checkPacket.GetBytes(dictionary));
-            }
-        }
-
-
-        /// <summary>
         /// Get the raw packet bytes
         /// </summary>
         /// <returns></returns>
@@ -372,9 +356,17 @@ namespace Flexinets.Radius.Core
 
             var packetBytesArray = packetBytes.ToArray();
 
-            // If the packet is a response, calculate and set the response authenticator, otherwise use the randomised authenticator
-            var authenticator = _requestAuthenticator != null ? CalculateResponseAuthenticator(SharedSecret, _requestAuthenticator, packetBytesArray) : Authenticator;
-            Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
+            if (Code == PacketCode.AccountingRequest)
+            {
+                var authenticator = CalculateAccountingRequestAuthenticator(SharedSecret, packetBytesArray);
+                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
+            }
+            else
+            {
+                var authenticator = _requestAuthenticator != null ? CalculateResponseAuthenticator(SharedSecret, _requestAuthenticator, packetBytesArray) : Authenticator;
+                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
+            }
+
 
             return packetBytesArray;
         }
@@ -410,6 +402,28 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
+        /// Validates a message authenticator attribute if one exists in the packet
+        /// Message-Authenticator = HMAC-MD5 (Type, Identifier, Length, Request Authenticator, Attributes)
+        /// The HMAC-MD5 function takes in two arguments:
+        /// The payload of the packet, which includes the 16 byte Message-Authenticator field filled with zeros
+        /// The shared secret
+        /// https://www.ietf.org/rfc/rfc2869.txt
+        /// </summary>
+        /// <returns></returns>
+        public static Byte[] CalculateMessageAuthenticator(IRadiusPacket packet, RadiusDictionary dictionary)
+        {
+            // Clone the original packet so we can change the message authenticator to zeros
+            var checkPacket = Parse(packet.GetBytes(dictionary), dictionary, packet.SharedSecret);
+            checkPacket.Attributes["Message-Authenticator"][0] = new Byte[16];
+
+            using (var md5 = new HMACMD5(checkPacket.SharedSecret))
+            {
+                return md5.ComputeHash(checkPacket.GetBytes(dictionary));
+            }
+        }
+
+
+        /// <summary>
         /// Creates a response authenticator
         /// Response authenticator = MD5(Code+ID+Length+RequestAuth+Attributes+Secret)
         /// Actually this means it is the response packet with the request authenticator and secret...
@@ -420,15 +434,25 @@ namespace Flexinets.Radius.Core
         /// <returns>Response authenticator for the packet</returns>
         private static Byte[] CalculateResponseAuthenticator(Byte[] sharedSecret, Byte[] requestAuthenticator, Byte[] packetBytes)
         {
-            var responseAuthenticator = new Byte[packetBytes.Length + sharedSecret.Length];
-            Buffer.BlockCopy(packetBytes, 0, responseAuthenticator, 0, packetBytes.Length);
+            var responseAuthenticator = packetBytes.Concat(sharedSecret).ToArray();
             Buffer.BlockCopy(requestAuthenticator, 0, responseAuthenticator, 4, 16);
-            Buffer.BlockCopy(sharedSecret, 0, responseAuthenticator, packetBytes.Length, sharedSecret.Length);
 
             using (var md5 = MD5.Create())
             {
                 return md5.ComputeHash(responseAuthenticator);
             }
+        }
+
+
+        /// <summary>
+        /// Calculate the request authenticator used in accounting requests
+        /// </summary>
+        /// <param name="sharedSecret"></param>
+        /// <param name="packetBytes"></param>
+        /// <returns></returns>
+        public static Byte[] CalculateAccountingRequestAuthenticator(Byte[] sharedSecret, Byte[] packetBytes)
+        {
+            return CalculateResponseAuthenticator(sharedSecret, new Byte[16], packetBytes);
         }
     }
 }
