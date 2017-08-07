@@ -54,12 +54,18 @@ namespace Flexinets.Radius.Core
             SharedSecret = Encoding.UTF8.GetBytes(secret);
 
             // Generate random authenticator for access request packets
-            if (Authenticator == null && (Code == PacketCode.AccessRequest || Code == PacketCode.StatusServer))
+            if (Code == PacketCode.AccessRequest || Code == PacketCode.StatusServer)
             {
                 using (var csp = RandomNumberGenerator.Create())
                 {
                     csp.GetNonZeroBytes(Authenticator);
                 }
+            }
+
+            // A Message authenticator is required in status server packets, calculated last
+            if (Code == PacketCode.StatusServer)
+            {
+                AddAttribute("Message-Authenticator", new Byte[16]);
             }
         }
 
@@ -103,6 +109,7 @@ namespace Flexinets.Radius.Core
 
             // The rest are attribute value pairs
             var position = 20;
+            var messageAuthenticatorPosition = 0;
             while (position < packetBytes.Length)
             {
                 var typecode = packetBytes[position];
@@ -141,6 +148,10 @@ namespace Flexinets.Radius.Core
                     else
                     {
                         var attributeDefinition = dictionary.Attributes[typecode];
+                        if (attributeDefinition.Code == 80)
+                        {
+                            messageAuthenticatorPosition = position;
+                        }
                         try
                         {
                             var content = ParseContentBytes(contentBytes, attributeDefinition.Type, typecode, radiusPacket.Authenticator, radiusPacket.SharedSecret);
@@ -162,6 +173,18 @@ namespace Flexinets.Radius.Core
                 }
 
                 position += length;
+            }
+
+            if (messageAuthenticatorPosition != 0)
+            {
+                var messageAuthenticator = radiusPacket.GetAttribute<Byte[]>("Message-Authenticator");
+                var temp = new Byte[16];
+                Buffer.BlockCopy(temp, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
+                var calculatedMessageAuthenticator = CalculateMessageAuthenticator(packetBytes, sharedSecret);
+                if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
+                {
+                    throw new InvalidOperationException($"Invalid Message-Authenticator in packet {radiusPacket.Identifier}");
+                }
             }
 
             return radiusPacket;
@@ -301,6 +324,7 @@ namespace Flexinets.Radius.Core
             };
             packetBytes.AddRange(new Byte[18]); // Placeholder for length and authenticator
 
+            var messageAuthenticatorPosition = 0;
             foreach (var attribute in Attributes)
             {
                 // todo add logic to check attribute object type matches type in dictionary?
@@ -319,6 +343,10 @@ namespace Flexinets.Radius.Core
                         if (attributeType.Value.Code == 2)
                         {
                             contentBytes = RadiusPassword.Encrypt(SharedSecret, Authenticator, contentBytes);
+                        }
+                        else if (attributeType.Value.Code == 80)    // Remember the position of the message authenticator, because it has to be added after everything else
+                        {
+                            messageAuthenticatorPosition = packetBytes.Count;
                         }
                     }
                     else
@@ -366,6 +394,14 @@ namespace Flexinets.Radius.Core
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
             }
 
+            if (messageAuthenticatorPosition != 0)
+            {
+                var temp = new Byte[16];
+                Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, SharedSecret);
+                Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+            }
+
 
             return packetBytesArray;
         }
@@ -409,15 +445,11 @@ namespace Flexinets.Radius.Core
         /// https://www.ietf.org/rfc/rfc2869.txt
         /// </summary>
         /// <returns></returns>
-        public static Byte[] CalculateMessageAuthenticator(IRadiusPacket packet, RadiusDictionary dictionary)
+        private static Byte[] CalculateMessageAuthenticator(Byte[] packetBytes, Byte[] sharedSecret)
         {
-            // Clone the original packet so we can change the message authenticator to zeros
-            var checkPacket = Parse(packet.GetBytes(dictionary), dictionary, packet.SharedSecret);
-            checkPacket.Attributes["Message-Authenticator"][0] = new Byte[16];
-
-            using (var md5 = new HMACMD5(checkPacket.SharedSecret))
+            using (var md5 = new HMACMD5(sharedSecret))
             {
-                return md5.ComputeHash(checkPacket.GetBytes(dictionary));
+                return md5.ComputeHash(packetBytes);
             }
         }
 
