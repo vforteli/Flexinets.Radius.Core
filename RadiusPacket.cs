@@ -94,9 +94,9 @@ namespace Flexinets.Radius.Core
 
             Buffer.BlockCopy(packetBytes, 4, radiusPacket.Authenticator, 0, 16);
 
-            if (radiusPacket.Code == PacketCode.AccountingRequest)
+            if (radiusPacket.Code == PacketCode.AccountingRequest || radiusPacket.Code == PacketCode.DisconnectRequest)
             {
-                if (!radiusPacket.Authenticator.SequenceEqual(CalculateAccountingRequestAuthenticator(radiusPacket.SharedSecret, packetBytes)))
+                if (!radiusPacket.Authenticator.SequenceEqual(CalculateRequestAuthenticator(radiusPacket.SharedSecret, packetBytes)))
                 {
                     throw new InvalidOperationException($"Invalid request authenticator in packet {radiusPacket.Identifier}, check secret?");
                 }
@@ -356,9 +356,9 @@ namespace Flexinets.Radius.Core
 
             var packetBytesArray = packetBytes.ToArray();
 
-            if (Code == PacketCode.AccountingRequest)
+            if (Code == PacketCode.AccountingRequest || Code == PacketCode.DisconnectRequest)
             {
-                var authenticator = CalculateAccountingRequestAuthenticator(SharedSecret, packetBytesArray);
+                var authenticator = CalculateRequestAuthenticator(SharedSecret, packetBytesArray);
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
             }
             else
@@ -445,12 +445,12 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
-        /// Calculate the request authenticator used in accounting requests
+        /// Calculate the request authenticator used in accounting and disconnect requests
         /// </summary>
         /// <param name="sharedSecret"></param>
         /// <param name="packetBytes"></param>
         /// <returns></returns>
-        public static Byte[] CalculateAccountingRequestAuthenticator(Byte[] sharedSecret, Byte[] packetBytes)
+        public static Byte[] CalculateRequestAuthenticator(Byte[] sharedSecret, Byte[] packetBytes)
         {
             return CalculateResponseAuthenticator(sharedSecret, new Byte[16], packetBytes);
         }
