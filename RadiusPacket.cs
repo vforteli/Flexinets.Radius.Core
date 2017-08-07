@@ -47,12 +47,11 @@ namespace Flexinets.Radius.Core
         /// <param name="identifier"></param>
         /// <param name="secret"></param>
         /// <param name="authenticator">Set authenticator for testing</param>
-        public RadiusPacket(PacketCode code, Byte identifier, String secret, Byte[] authenticator = null)
+        public RadiusPacket(PacketCode code, Byte identifier, String secret)
         {
             Code = code;
             Identifier = identifier;
             SharedSecret = Encoding.UTF8.GetBytes(secret);
-            Authenticator = authenticator ?? new Byte[16];
 
             // Generate random authenticator for access request packets
             if (Authenticator == null && (Code == PacketCode.AccessRequest || Code == PacketCode.StatusServer))
