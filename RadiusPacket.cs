@@ -78,16 +78,10 @@ namespace Flexinets.Radius.Core
         /// <param name="sharedSecret"></param>
         public static IRadiusPacket Parse(Byte[] packetBytes, RadiusDictionary dictionary, Byte[] sharedSecret)
         {
-            // Check the packet length and make sure its valid
-            var lengthBytes = new Byte[2];
-            lengthBytes[0] = packetBytes[3];
-            lengthBytes[1] = packetBytes[2];
-            var packetLength = BitConverter.ToUInt16(lengthBytes, 0);
+            var packetLength = BitConverter.ToUInt16(packetBytes.Skip(2).Take(2).Reverse().ToArray(), 0);
             if (packetBytes.Length != packetLength)
             {
-                var message = $"Packet length does not match, expected: {packetLength}, actual: {packetBytes.Length}";
-                _log.ErrorFormat(message);
-                throw new InvalidOperationException(message);
+                throw new InvalidOperationException($"Packet length does not match, expected: {packetLength}, actual: {packetBytes.Length}");
             }
 
             var packet = new RadiusPacket
@@ -476,7 +470,7 @@ namespace Flexinets.Radius.Core
         /// <param name="sharedSecret"></param>
         /// <param name="packetBytes"></param>
         /// <returns></returns>
-        public static Byte[] CalculateRequestAuthenticator(Byte[] sharedSecret, Byte[] packetBytes)
+        internal static Byte[] CalculateRequestAuthenticator(Byte[] sharedSecret, Byte[] packetBytes)
         {
             return CalculateResponseAuthenticator(sharedSecret, new Byte[16], packetBytes);
         }

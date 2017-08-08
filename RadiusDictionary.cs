@@ -11,7 +11,7 @@ namespace Flexinets.Radius.Core
         // todo hide these and create methods for retrieving attributes
         public Dictionary<Byte, DictionaryAttribute> Attributes { get; private set; } = new Dictionary<Byte, DictionaryAttribute>();
         public List<DictionaryVendorAttribute> VendorSpecificAttributes { get; private set; } = new List<DictionaryVendorAttribute>();
-        public Dictionary<String, DictionaryAttribute> AttributeNames { get; private set; } = new Dictionary<string, DictionaryAttribute>();
+        public Dictionary<String, DictionaryAttribute> AttributeNames { get; private set; } = new Dictionary<String, DictionaryAttribute>();
         private readonly ILog _log = LogManager.GetLogger(typeof(RadiusDictionary));
 
             
