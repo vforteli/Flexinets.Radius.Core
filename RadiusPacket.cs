@@ -90,20 +90,20 @@ namespace Flexinets.Radius.Core
                 throw new InvalidOperationException(message);
             }
 
-            var radiusPacket = new RadiusPacket
+            var packet = new RadiusPacket
             {
                 SharedSecret = sharedSecret,
                 Identifier = packetBytes[1],
                 Code = (PacketCode)packetBytes[0],
             };
 
-            Buffer.BlockCopy(packetBytes, 4, radiusPacket.Authenticator, 0, 16);
+            Buffer.BlockCopy(packetBytes, 4, packet.Authenticator, 0, 16);
 
-            if (radiusPacket.Code == PacketCode.AccountingRequest || radiusPacket.Code == PacketCode.DisconnectRequest)
+            if (packet.Code == PacketCode.AccountingRequest || packet.Code == PacketCode.DisconnectRequest)
             {
-                if (!radiusPacket.Authenticator.SequenceEqual(CalculateRequestAuthenticator(radiusPacket.SharedSecret, packetBytes)))
+                if (!packet.Authenticator.SequenceEqual(CalculateRequestAuthenticator(packet.SharedSecret, packetBytes)))
                 {
-                    throw new InvalidOperationException($"Invalid request authenticator in packet {radiusPacket.Identifier}, check secret?");
+                    throw new InvalidOperationException($"Invalid request authenticator in packet {packet.Identifier}, check secret?");
                 }
             }
 
@@ -136,8 +136,8 @@ namespace Flexinets.Radius.Core
                         {
                             try
                             {
-                                var content = ParseContentBytes(vsa.Value, vendorAttributeDefinition.Type, typecode, radiusPacket.Authenticator, radiusPacket.SharedSecret);
-                                radiusPacket.AddAttributeObject(vendorAttributeDefinition.Name, content);
+                                var content = ParseContentBytes(vsa.Value, vendorAttributeDefinition.Type, typecode, packet.Authenticator, packet.SharedSecret);
+                                packet.AddAttributeObject(vendorAttributeDefinition.Name, content);
                             }
                             catch (Exception ex)
                             {
@@ -154,8 +154,8 @@ namespace Flexinets.Radius.Core
                         }
                         try
                         {
-                            var content = ParseContentBytes(contentBytes, attributeDefinition.Type, typecode, radiusPacket.Authenticator, radiusPacket.SharedSecret);
-                            radiusPacket.AddAttributeObject(attributeDefinition.Name, content);
+                            var content = ParseContentBytes(contentBytes, attributeDefinition.Type, typecode, packet.Authenticator, packet.SharedSecret);
+                            packet.AddAttributeObject(attributeDefinition.Name, content);
                         }
                         catch (Exception ex)
                         {
@@ -177,17 +177,17 @@ namespace Flexinets.Radius.Core
 
             if (messageAuthenticatorPosition != 0)
             {
-                var messageAuthenticator = radiusPacket.GetAttribute<Byte[]>("Message-Authenticator");
+                var messageAuthenticator = packet.GetAttribute<Byte[]>("Message-Authenticator");
                 var temp = new Byte[16];
                 Buffer.BlockCopy(temp, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
                 var calculatedMessageAuthenticator = CalculateMessageAuthenticator(packetBytes, sharedSecret);
                 if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
                 {
-                    throw new InvalidOperationException($"Invalid Message-Authenticator in packet {radiusPacket.Identifier}");
+                    throw new InvalidOperationException($"Invalid Message-Authenticator in packet {packet.Identifier}");
                 }
             }
 
-            return radiusPacket;
+            return packet;
         }
 
 
@@ -333,41 +333,37 @@ namespace Flexinets.Radius.Core
                     var contentBytes = GetAttributeValueBytes(value);
                     var headerBytes = new Byte[2];
 
-                    // Figure out what kind of attribute this is
-                    var attributeType = dictionary.Attributes.SingleOrDefault(o => o.Value.Name == attribute.Key);
-                    if (dictionary.Attributes.ContainsValue(attributeType.Value))
+                    dictionary.AttributeNames.TryGetValue(attribute.Key, out var attributeType);
+                    switch (attributeType)
                     {
-                        headerBytes[0] = attributeType.Value.Code;
-
-                        // Encrypt password if this is a User-Password attribute
-                        if (attributeType.Value.Code == 2)
-                        {
-                            contentBytes = RadiusPassword.Encrypt(SharedSecret, Authenticator, contentBytes);
-                        }
-                        else if (attributeType.Value.Code == 80)    // Remember the position of the message authenticator, because it has to be added after everything else
-                        {
-                            messageAuthenticatorPosition = packetBytes.Count;
-                        }
-                    }
-                    else
-                    {
-                        // Maybe this is a vendor attribute?
-                        var vendorAttributeType = dictionary.VendorSpecificAttributes.SingleOrDefault(o => o.Name == attribute.Key);
-                        if (vendorAttributeType != null)
-                        {
+                        case DictionaryVendorAttribute _attributeType:
                             headerBytes = new Byte[8];
                             headerBytes[0] = 26; // VSA type
 
-                            var vendorId = BitConverter.GetBytes(vendorAttributeType.VendorId);
+                            var vendorId = BitConverter.GetBytes(_attributeType.VendorId);
                             Array.Reverse(vendorId);
                             Buffer.BlockCopy(vendorId, 0, headerBytes, 2, 4);
-                            headerBytes[6] = (Byte)vendorAttributeType.VendorCode;
+                            headerBytes[6] = (Byte)_attributeType.VendorCode;
                             headerBytes[7] = (Byte)(2 + contentBytes.Length);  // length of the vsa part
-                        }
-                        else
-                        {
+                            break;
+
+                        case DictionaryAttribute _attributeType:
+                            headerBytes[0] = attributeType.Code;
+
+                            // Encrypt password if this is a User-Password attribute
+                            if (_attributeType.Code == 2)
+                            {
+                                contentBytes = RadiusPassword.Encrypt(SharedSecret, Authenticator, contentBytes);
+                            }
+                            else if (_attributeType.Code == 80)    // Remember the position of the message authenticator, because it has to be added after everything else
+                            {
+                                messageAuthenticatorPosition = packetBytes.Count;
+                            }
+                            break;
+
+                        default:
                             _log.Info($"Ignoring unknown attribute {attribute.Key}");
-                        }
+                            break;
                     }
 
                     headerBytes[1] = (Byte)(headerBytes.Length + contentBytes.Length);

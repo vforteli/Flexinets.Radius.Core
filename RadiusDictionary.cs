@@ -8,11 +8,13 @@ namespace Flexinets.Radius.Core
 {
     public class RadiusDictionary
     {
+        // todo hide these and create methods for retrieving attributes
         public Dictionary<Byte, DictionaryAttribute> Attributes { get; private set; } = new Dictionary<Byte, DictionaryAttribute>();
         public List<DictionaryVendorAttribute> VendorSpecificAttributes { get; private set; } = new List<DictionaryVendorAttribute>();
+        public Dictionary<String, DictionaryAttribute> AttributeNames { get; private set; } = new Dictionary<string, DictionaryAttribute>();
         private readonly ILog _log = LogManager.GetLogger(typeof(RadiusDictionary));
 
-
+            
         /// <summary>
         /// Create a dictionary with predefined lists, for example from a database
         /// </summary>
@@ -45,17 +47,31 @@ namespace Flexinets.Radius.Core
                         {
                             Attributes.Remove(key);
                         }
-                        Attributes.Add(key, new DictionaryAttribute(lineparts[2], key, lineparts[3]));
+                        if (AttributeNames.ContainsKey(lineparts[2]))
+                        {
+                            AttributeNames.Remove(lineparts[2]);
+                        }
+                        var attributeDefinition = new DictionaryAttribute(lineparts[2], key, lineparts[3]);
+                        Attributes.Add(key, attributeDefinition);
+                        AttributeNames.Add(attributeDefinition.Name, attributeDefinition);
                     }
 
                     if (line.StartsWith("VendorSpecificAttribute"))
                     {
                         var lineparts = line.Split(new char[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        VendorSpecificAttributes.Add(new DictionaryVendorAttribute(
+                        var vsa = new DictionaryVendorAttribute(
                             Convert.ToUInt32(lineparts[1]),
                             lineparts[3],
                             Convert.ToUInt32(lineparts[2]),
-                            lineparts[4]));
+                            lineparts[4]);
+
+                        VendorSpecificAttributes.Add(vsa);
+
+                        if (AttributeNames.ContainsKey(vsa.Name))
+                        {
+                            AttributeNames.Remove(vsa.Name);
+                        }
+                        AttributeNames.Add(vsa.Name, vsa);
                     }
                 }
 
