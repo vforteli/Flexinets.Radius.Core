@@ -362,8 +362,7 @@ namespace Flexinets.Radius.Core
                             break;
 
                         default:
-                            _log.Info($"Ignoring unknown attribute {attribute.Key}");
-                            break;
+                            throw new InvalidOperationException($"Unknown attribute {attribute.Key}, check spelling or dictionary");
                     }
 
                     headerBytes[1] = (Byte)(headerBytes.Length + contentBytes.Length);
