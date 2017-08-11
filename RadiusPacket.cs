@@ -1,6 +1,7 @@
 ﻿using log4net;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
@@ -182,6 +183,40 @@ namespace Flexinets.Radius.Core
             }
 
             return packet;
+        }
+
+
+        /// <summary>
+        /// Tries to get a packet from the stream. Returns true if successful
+        /// Returns false if no packet could be parsed or stream is empty ie closing
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="packet"></param>
+        /// <param name="dictionary"></param>
+        /// <returns></returns>
+        public static Boolean TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, RadiusDictionary dictionary, Byte[] sharedSecret)
+        {
+            var packetHeaderBytes = new Byte[4];
+            var i = stream.Read(packetHeaderBytes, 0, 4);
+            if (i != 0)
+            {
+                try
+                {
+                    var packetLength = BitConverter.ToUInt16(packetHeaderBytes.Reverse().ToArray(), 0);
+                    var packetContentBytes = new Byte[packetLength - 4];
+                    stream.Read(packetContentBytes, 0, packetContentBytes.Length);
+
+                    packet = Parse(packetHeaderBytes.Concat(packetContentBytes).ToArray(), dictionary, sharedSecret);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _log.Warn("Unable to parse packet from stream", ex);
+                }
+            }
+
+            packet = null;
+            return false;
         }
 
 
