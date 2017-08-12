@@ -18,6 +18,7 @@
     </contentFiles>
   </metadata>
   <files>
+    <file src="install.ps1" target="Tools"/>
     <file src="radius.dictionary" target="content" />
   </files>
 </package>
