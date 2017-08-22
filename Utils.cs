@@ -28,11 +28,7 @@ namespace Flexinets.Radius.Core
         /// <returns></returns>
         public static String ToHexString(this Byte[] bytes)
         {
-            if (bytes == null)
-            {
-                return null;
-            }
-            return BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "");
+            return bytes != null ? BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "") : null;    
         }
 
 
@@ -60,7 +56,7 @@ namespace Flexinets.Radius.Core
                 {
                     mccmnc = mccmnc + mncDigit3;
                 }
-            }           
+            }
 
             return (type, mccmnc);
         }
