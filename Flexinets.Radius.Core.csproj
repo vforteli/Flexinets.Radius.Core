@@ -1,74 +1,36 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{658C7009-7741-4C4E-B403-35E87C1E2E90}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Flexinets.Radius.Core</RootNamespace>
-    <AssemblyName>Flexinets.Radius.Core</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ShouldCreateLogs>True</ShouldCreateLogs>
-    <AdvancedSettingsExpanded>True</AdvancedSettingsExpanded>
-    <UpdateAssemblyVersion>False</UpdateAssemblyVersion>
-    <UpdateAssemblyFileVersion>False</UpdateAssemblyFileVersion>
-    <UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
-    <AssemblyVersionSettings>
-    </AssemblyVersionSettings>
-    <AssemblyFileVersionSettings>
-    </AssemblyFileVersionSettings>
-    <AssemblyInfoVersionSettings>
-    </AssemblyInfoVersionSettings>
+    <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
+    <Version>1.3.0.0</Version>
+    <Title>Flexinets.Radius.Core</Title>
+    <Authors>Verner Fortelius</Authors>
+    <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
+    <Copyright>Copyright 2017 Verner Fortelius</Copyright>
+    <PackageLicenseUrl>https://github.com/vforteli/Flexinets.Radius.Core/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
+    <PackageReleaseNotes>Target .Net Standard 2.0 and .Net 4.7</PackageReleaseNotes>
+    <PackageTags>Radius packet parser assembler</PackageTags>
+    <AssemblyVersion>1.3.0.0</AssemblyVersion>
+    <FileVersion>1.3.0.0</FileVersion>    
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="Microsoft.CSharp" />
+    <None Remove="Content\radius.dictionary" />
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="AcctStatusTypes.cs" />
-    <Compile Include="AcctTerminateCause.cs" />
-    <Compile Include="DictionaryAttribute.cs" />
-    <Compile Include="DictionaryVendorAttribute.cs" />
-    <Compile Include="IPacketHandler.cs" />
-    <Compile Include="IRadiusPacket.cs" />
-    <Compile Include="LocationType.cs" />
-    <Compile Include="PacketCode.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RadiusDictionary.cs" />
-    <Compile Include="RadiusPacket.cs" />
-    <Compile Include="RadiusPassword.cs" />
-    <Compile Include="Utils.cs" />
-    <Compile Include="VendorSpecificAttribute.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="radius.dictionary">
+    <Content Include="Content\radius.dictionary">
+      <PackageCopyToOutput>true</PackageCopyToOutput>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="packages.config" />
+      <IncludeInPackage>true</IncludeInPackage>
+      <BuildAction>None</BuildAction>
+      <CopyToOutput>true</CopyToOutput>
+    </Content>
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <ItemGroup>
+    <PackageReference Include="log4net" Version="2.0.8" />
+  </ItemGroup>
+
 </Project>
