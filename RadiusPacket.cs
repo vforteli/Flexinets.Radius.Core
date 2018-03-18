@@ -155,6 +155,7 @@ namespace Flexinets.Radius.Core
                         catch (Exception ex)
                         {
                             _log.Error($"Something went wrong with {attributeDefinition.Name}", ex);
+                            _log.Debug($"Attribute bytes: {contentBytes.ToHexString()}");
                         }
                     }
                 }
