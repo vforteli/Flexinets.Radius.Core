@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
-    <Version>1.3.0.2</Version>
+    <Version>1.3.0.3</Version>
     <Title>Flexinets.Radius.Core</Title>
     <Authors>Verner Fortelius</Authors>
     <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
@@ -11,8 +11,8 @@
     <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
     <PackageReleaseNotes>Target .Net Standard 2.0 and .Net 4.7</PackageReleaseNotes>
     <PackageTags>Radius packet parser assembler</PackageTags>
-    <AssemblyVersion>1.3.0.2</AssemblyVersion>
-    <FileVersion>1.3.0.2</FileVersion>    
+    <AssemblyVersion>1.3.0.3</AssemblyVersion>
+    <FileVersion>1.3.0.3</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
