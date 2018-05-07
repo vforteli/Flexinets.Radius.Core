@@ -14,7 +14,7 @@ namespace Flexinets.Radius.Core
         public Dictionary<String, DictionaryAttribute> AttributeNames { get; private set; } = new Dictionary<String, DictionaryAttribute>();
         private readonly ILog _log = LogManager.GetLogger(typeof(RadiusDictionary));
 
-            
+
         /// <summary>
         /// Create a dictionary with predefined lists, for example from a database
         /// </summary>
@@ -22,6 +22,24 @@ namespace Flexinets.Radius.Core
         /// <param name="vendorSpecificAttributes"></param>
         public RadiusDictionary(List<DictionaryAttribute> attributes, List<DictionaryVendorAttribute> vendorSpecificAttributes)
         {
+            AttributeNames = new Dictionary<string, DictionaryAttribute>();
+            foreach (var attribute in attributes)
+            {
+                if (AttributeNames.ContainsKey(attribute.Name))
+                {
+                    AttributeNames.Remove(attribute.Name);
+                }
+                AttributeNames.Add(attribute.Name, attribute);
+            }
+            foreach (var vendorAttribute in vendorSpecificAttributes)
+            {
+                if (AttributeNames.ContainsKey(vendorAttribute.Name))
+                {
+                    AttributeNames.Remove(vendorAttribute.Name);
+                }
+                AttributeNames.Add(vendorAttribute.Name, vendorAttribute);
+            }
+
             Attributes = attributes.ToDictionary(o => o.Code);
             VendorSpecificAttributes = vendorSpecificAttributes;
         }
