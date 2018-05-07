@@ -84,8 +84,9 @@ namespace Flexinets.Radius.Core
             {
                 var temp = new Byte[16];
                 Buffer.BlockCopy(passwordBytes, (n - 1) * 16, temp, 0, 16);
-                bytes.AddRange(EncryptDecrypt(temp, key));
-                key = CreateKey(sharedSecret, temp);
+                var xor = EncryptDecrypt(temp, key);
+                bytes.AddRange(xor);
+                key = CreateKey(sharedSecret, xor);
             }
 
             return bytes.ToArray();
