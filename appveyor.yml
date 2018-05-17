@@ -1,0 +1,7 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+clone_folder: c:/projects/radiuscore/
+before_build:
+- cmd: nuget restore C:/projects/radiuscore/flexinets.radius.core.sln -PackagesDirectory C:/projects/radiuscore/packages/
+build:
+  verbosity: minimal
