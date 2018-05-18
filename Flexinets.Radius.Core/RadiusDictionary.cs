@@ -6,43 +6,12 @@ using System.Linq;
 
 namespace Flexinets.Radius.Core
 {
-    public class RadiusDictionary
+    public class RadiusDictionary : IRadiusDictionary
     {
-        // todo hide these and create methods for retrieving attributes
-        public Dictionary<Byte, DictionaryAttribute> Attributes { get; private set; } = new Dictionary<Byte, DictionaryAttribute>();
-        public List<DictionaryVendorAttribute> VendorSpecificAttributes { get; private set; } = new List<DictionaryVendorAttribute>();
-        public Dictionary<String, DictionaryAttribute> AttributeNames { get; private set; } = new Dictionary<String, DictionaryAttribute>();
+        internal Dictionary<Byte, DictionaryAttribute> Attributes { get; set; } = new Dictionary<Byte, DictionaryAttribute>();
+        internal List<DictionaryVendorAttribute> VendorSpecificAttributes { get; set; } = new List<DictionaryVendorAttribute>();
+        internal Dictionary<String, DictionaryAttribute> AttributeNames { get; set; } = new Dictionary<String, DictionaryAttribute>();
         private readonly ILog _log = LogManager.GetLogger(typeof(RadiusDictionary));
-
-
-        /// <summary>
-        /// Create a dictionary with predefined lists, for example from a database
-        /// </summary>
-        /// <param name="attributes"></param>
-        /// <param name="vendorSpecificAttributes"></param>
-        public RadiusDictionary(List<DictionaryAttribute> attributes, List<DictionaryVendorAttribute> vendorSpecificAttributes)
-        {
-            AttributeNames = new Dictionary<string, DictionaryAttribute>();
-            foreach (var attribute in attributes)
-            {
-                if (AttributeNames.ContainsKey(attribute.Name))
-                {
-                    AttributeNames.Remove(attribute.Name);
-                }
-                AttributeNames.Add(attribute.Name, attribute);
-            }
-            foreach (var vendorAttribute in vendorSpecificAttributes)
-            {
-                if (AttributeNames.ContainsKey(vendorAttribute.Name))
-                {
-                    AttributeNames.Remove(vendorAttribute.Name);
-                }
-                AttributeNames.Add(vendorAttribute.Name, vendorAttribute);
-            }
-
-            Attributes = attributes.ToDictionary(o => o.Code);
-            VendorSpecificAttributes = vendorSpecificAttributes;
-        }
 
 
         /// <summary>
@@ -95,6 +64,23 @@ namespace Flexinets.Radius.Core
 
                 _log.Info($"Parsed {Attributes.Count} attributes and {VendorSpecificAttributes.Count} vendor attributes from file");
             }
+        }
+
+
+        public DictionaryVendorAttribute GetVendorAttribute(uint vendorId, byte vendorCode)
+        {
+            return VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vendorId && o.VendorCode == vendorCode);
+        }
+
+        public DictionaryAttribute GetAttribute(byte typecode)
+        {
+            return Attributes[typecode];
+        }
+
+        public DictionaryAttribute GetAttribute(string name)
+        {
+            AttributeNames.TryGetValue(name, out var attributeType);
+            return attributeType;
         }
     }
 }

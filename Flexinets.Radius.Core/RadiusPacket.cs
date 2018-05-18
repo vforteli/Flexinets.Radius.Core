@@ -77,7 +77,7 @@ namespace Flexinets.Radius.Core
         /// <param name="packetBytes"></param>
         /// <param name="dictionary"></param>
         /// <param name="sharedSecret"></param>
-        public static IRadiusPacket Parse(Byte[] packetBytes, RadiusDictionary dictionary, Byte[] sharedSecret)
+        public static IRadiusPacket Parse(Byte[] packetBytes, IRadiusDictionary dictionary, Byte[] sharedSecret)
         {
             var packetLength = BitConverter.ToUInt16(packetBytes.Skip(2).Take(2).Reverse().ToArray(), 0);
             if (packetBytes.Length != packetLength)
@@ -122,7 +122,7 @@ namespace Flexinets.Radius.Core
                     if (typecode == 26) // VSA
                     {
                         var vsa = new VendorSpecificAttribute(contentBytes);
-                        var vendorAttributeDefinition = dictionary.VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vsa.VendorId && o.VendorCode == vsa.VendorCode);
+                        var vendorAttributeDefinition = dictionary.GetVendorAttribute(vsa.VendorId, vsa.VendorCode);
                         if (vendorAttributeDefinition == null)
                         {
                             _log.Info($"Unknown vsa: {vsa.VendorId}:{vsa.VendorCode}");
@@ -142,7 +142,7 @@ namespace Flexinets.Radius.Core
                     }
                     else
                     {
-                        var attributeDefinition = dictionary.Attributes[typecode];
+                        var attributeDefinition = dictionary.GetAttribute(typecode);
                         if (attributeDefinition.Code == 80)
                         {
                             messageAuthenticatorPosition = position;
@@ -195,7 +195,7 @@ namespace Flexinets.Radius.Core
         /// <param name="packet"></param>
         /// <param name="dictionary"></param>
         /// <returns></returns>
-        public static Boolean TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, RadiusDictionary dictionary, Byte[] sharedSecret)
+        public static Boolean TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, IRadiusDictionary dictionary, Byte[] sharedSecret)
         {
             var packetHeaderBytes = new Byte[4];
             var i = stream.Read(packetHeaderBytes, 0, 4);
@@ -345,7 +345,7 @@ namespace Flexinets.Radius.Core
         /// Get the raw packet bytes
         /// </summary>
         /// <returns></returns>
-        public Byte[] GetBytes(RadiusDictionary dictionary)
+        public Byte[] GetBytes(IRadiusDictionary dictionary)
         {
             var packetBytes = new List<Byte>
             {
@@ -363,7 +363,7 @@ namespace Flexinets.Radius.Core
                     var contentBytes = GetAttributeValueBytes(value);
                     var headerBytes = new Byte[2];
 
-                    dictionary.AttributeNames.TryGetValue(attribute.Key, out var attributeType);
+                    var attributeType = dictionary.GetAttribute(attribute.Key);
                     switch (attributeType)
                     {
                         case DictionaryVendorAttribute _attributeType:
