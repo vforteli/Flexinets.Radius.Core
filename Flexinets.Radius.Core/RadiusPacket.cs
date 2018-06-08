@@ -408,7 +408,7 @@ namespace Flexinets.Radius.Core
 
             var packetBytesArray = packetBytes.ToArray();
 
-            if (Code == PacketCode.AccountingRequest || Code == PacketCode.DisconnectRequest)
+            if (Code == PacketCode.AccountingRequest || Code == PacketCode.DisconnectRequest || Code == PacketCode.CoaRequest)
             {
                 var authenticator = CalculateRequestAuthenticator(SharedSecret, packetBytesArray);
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
