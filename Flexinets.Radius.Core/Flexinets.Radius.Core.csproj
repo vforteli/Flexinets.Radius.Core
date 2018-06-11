@@ -2,17 +2,17 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
-    <Version>1.4.0.0</Version>
+    <Version>1.4.1.0</Version>
     <Title>Flexinets.Radius.Core</Title>
     <Authors>Verner Fortelius</Authors>
     <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
     <Copyright>Copyright 2017 Verner Fortelius</Copyright>
     <PackageLicenseUrl>https://github.com/vforteli/Flexinets.Radius.Core/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
-    <PackageReleaseNotes>Add getter methods for attributes and vendor attributes. (Breaking) Remove RadiusDictionary constructor for custom attribute lists. Implement IRadiusDictionary instead.</PackageReleaseNotes>
+    <PackageReleaseNotes>Add coa packets</PackageReleaseNotes>
     <PackageTags>Radius packet parser assembler</PackageTags>
-    <AssemblyVersion>1.4.0.0</AssemblyVersion>
-    <FileVersion>1.4.0.0</FileVersion>
+    <AssemblyVersion>1.4.1.0</AssemblyVersion>
+    <FileVersion>1.4.1.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
