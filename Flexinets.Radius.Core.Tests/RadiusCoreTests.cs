@@ -261,6 +261,24 @@ namespace Flexinets.Radius.Core.Tests
 
 
             Assert.AreEqual(password, decrypted);
-        }       
+        }
+
+
+        /// <summary>
+        /// Create CoA request packet and verify bytes
+        /// </summary>
+        [TestCase]
+        public void TestCreateCoARequestPacket()
+        {
+            var expected = "2b0000266613591d86e32fa6dbae94f13772573601066e656d6f0406c0a80110050600000003";
+            var secret = "xyzzy5461";
+
+            var packet = new RadiusPacket(PacketCode.CoaRequest, 0, secret);
+            packet.Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a");
+            packet.AddAttribute("User-Name", "nemo");
+            packet.AddAttribute("NAS-IP-Address", IPAddress.Parse("192.168.1.16"));
+            packet.AddAttribute("NAS-Port", 3);
+            Assert.AreEqual(expected, packet.GetBytes(GetDictionary()).ToHexString());
+        }
     }
 }
