@@ -501,7 +501,7 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
-        /// Calculate the request authenticator used in accounting and disconnect requests
+        /// Calculate the request authenticator used in accounting, disconnect and coa requests
         /// </summary>
         /// <param name="sharedSecret"></param>
         /// <param name="packetBytes"></param>

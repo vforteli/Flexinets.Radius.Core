@@ -15,6 +15,6 @@
         DisconnectNak = 42,
         CoaRequest = 43,
         CoaAck = 44,
-        CoatNak = 45
+        CoaNak = 45
     }
 }
