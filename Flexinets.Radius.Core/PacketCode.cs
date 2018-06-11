@@ -12,6 +12,9 @@
         StatusClient = 13,
         DisconnectRequest = 40,
         DisconnectAck = 41,
-        DisconnectNak = 42
+        DisconnectNak = 42,
+        CoaRequest = 43,
+        CoaAck = 44,
+        CoatNak = 45
     }
 }
