@@ -175,8 +175,10 @@ namespace Flexinets.Radius.Core
             {
                 var messageAuthenticator = packet.GetAttribute<Byte[]>("Message-Authenticator");
                 var temp = new Byte[16];
-                Buffer.BlockCopy(temp, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
-                var calculatedMessageAuthenticator = CalculateMessageAuthenticator(packetBytes, sharedSecret);
+                var tempPacket = new Byte[packetBytes.Length];
+                packetBytes.CopyTo(tempPacket, 0);
+                Buffer.BlockCopy(temp, 0, tempPacket, messageAuthenticatorPosition + 2, 16);
+                var calculatedMessageAuthenticator = CalculateMessageAuthenticator(tempPacket, sharedSecret);
                 if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
                 {
                     throw new InvalidOperationException($"Invalid Message-Authenticator in packet {packet.Identifier}");

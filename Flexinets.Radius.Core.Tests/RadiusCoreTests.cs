@@ -280,5 +280,21 @@ namespace Flexinets.Radius.Core.Tests
             packet.AddAttribute("NAS-Port", 3);
             Assert.AreEqual(expected, packet.GetBytes(GetDictionary()).ToHexString());
         }
+
+
+        /// <summary>
+        /// Test message authenticator validation success with no side effect
+        /// </summary>
+        [TestCase]
+        public void TestMessageAuthenticatorNoSideEffect()
+        {
+            var request = Utils.StringToByteArray("0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3");
+            var expected = Utils.StringToByteArray("0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3");
+            var secret = "xyzzy5461";
+
+            var dictionary = GetDictionary();
+            var requestPacket = RadiusPacket.Parse(request, dictionary, Encoding.UTF8.GetBytes(secret));
+            Assert.AreEqual(Utils.ToHexString(expected), Utils.ToHexString(request));
+        }
     }
 }
