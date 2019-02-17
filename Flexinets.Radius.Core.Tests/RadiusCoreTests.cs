@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using System;
 using System.IO;
@@ -13,7 +14,7 @@ namespace Flexinets.Radius.Core.Tests
         private RadiusDictionary GetDictionary()
         {
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\content\\radius.dictionary";
-            var dictionary = new RadiusDictionary(path);
+            var dictionary = new RadiusDictionary(path, NullLogger<RadiusDictionary>.Instance);
             return dictionary;
         }
 
@@ -35,7 +36,8 @@ namespace Flexinets.Radius.Core.Tests
             packet.AddAttribute("NAS-IP-Address", IPAddress.Parse("192.168.1.16"));
             packet.AddAttribute("NAS-Port", 3);
 
-            Assert.AreEqual(expected, packet.GetBytes(GetDictionary()).ToHexString());
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.AreEqual(expected, radiusPacketParser.GetBytes(packet).ToHexString());
         }
 
 
@@ -79,7 +81,8 @@ namespace Flexinets.Radius.Core.Tests
             packet.AddAttribute("NAS-IP-Address", IPAddress.Parse("192.168.1.16"));
             packet.AddAttribute("NAS-Port", 3);
 
-            Assert.That(() => packet.GetBytes(GetDictionary()),
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.That(() => radiusPacketParser.GetBytes(packet),
                Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -96,7 +99,8 @@ namespace Flexinets.Radius.Core.Tests
             var packet = new RadiusPacket(PacketCode.DisconnectRequest, 1, secret);
             packet.AddAttribute("Acct-Session-Id", "09042AF8");
 
-            Assert.AreEqual(expected, packet.GetBytes(GetDictionary()).ToHexString());
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.AreEqual(expected, radiusPacketParser.GetBytes(packet).ToHexString());
         }
 
 
@@ -112,7 +116,8 @@ namespace Flexinets.Radius.Core.Tests
             var packet = new RadiusPacket(PacketCode.StatusServer, 218, secret);
             packet.Authenticator = Utils.StringToByteArray("8a54f4686fb394c52866e302185d0623");
 
-            Assert.AreEqual(expected, packet.GetBytes(GetDictionary()).ToHexString());
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.AreEqual(expected, radiusPacketParser.GetBytes(packet).ToHexString());
         }
 
 
@@ -130,8 +135,9 @@ namespace Flexinets.Radius.Core.Tests
             packet.AddAttribute("NAS-IP-Address", IPAddress.Parse("192.168.1.16"));
             packet.AddAttribute("NAS-Port", 3);
 
-            var bytes = packet.GetBytes(dictionary);
-            var derp = RadiusPacket.Parse(bytes, dictionary, Encoding.UTF8.GetBytes(secret));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var bytes = radiusPacketParser.GetBytes(packet);
+            var derp = radiusPacketParser.Parse(bytes, Encoding.UTF8.GetBytes(secret));
 
         }
 
@@ -146,8 +152,9 @@ namespace Flexinets.Radius.Core.Tests
             var packetBytes = "0404002711019c27d4e00cbc523b3e2fc834baf401066e656d6f2806000000012c073230303234";
             var secret = "xyzzy5461";
 
-            var requestAuthenticator = RadiusPacket.CalculateRequestAuthenticator(Encoding.UTF8.GetBytes(secret), Utils.StringToByteArray(packetBytes));
-            var packet = RadiusPacket.Parse(Utils.StringToByteArray(packetBytes), GetDictionary(), Encoding.UTF8.GetBytes(secret));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestAuthenticator = radiusPacketParser.CalculateRequestAuthenticator(Encoding.UTF8.GetBytes(secret), Utils.StringToByteArray(packetBytes));
+            var packet = radiusPacketParser.Parse(Utils.StringToByteArray(packetBytes), Encoding.UTF8.GetBytes(secret));
 
             Assert.AreEqual(packet.Authenticator.ToHexString(), requestAuthenticator.ToHexString());
         }
@@ -163,8 +170,9 @@ namespace Flexinets.Radius.Core.Tests
             var packetBytes = "0404002711019c27d4e00cbc523b3e2fc834baf401066e656d6f2806000000012c073230303234";
             var secret = "foo";
 
-            var requestAuthenticator = RadiusPacket.CalculateRequestAuthenticator(Encoding.UTF8.GetBytes(secret), Utils.StringToByteArray(packetBytes));
-            Assert.That(() => RadiusPacket.Parse(Utils.StringToByteArray(packetBytes), GetDictionary(), Encoding.UTF8.GetBytes(secret)),
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestAuthenticator = radiusPacketParser.CalculateRequestAuthenticator(Encoding.UTF8.GetBytes(secret), Utils.StringToByteArray(packetBytes));
+            Assert.That(() => radiusPacketParser.Parse(Utils.StringToByteArray(packetBytes), Encoding.UTF8.GetBytes(secret)),
                 Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -179,9 +187,10 @@ namespace Flexinets.Radius.Core.Tests
             var expected = request;
             var secret = "xyzzy5461";
 
-            var dictionary = GetDictionary();
-            var requestPacket = RadiusPacket.Parse(Utils.StringToByteArray(request), dictionary, Encoding.UTF8.GetBytes(secret));
-            var bytes = requestPacket.GetBytes(dictionary);
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestPacket = radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret));
+            var bytes = radiusPacketParser.GetBytes(requestPacket);
 
             Assert.AreEqual(expected, bytes.ToHexString());
         }
@@ -205,7 +214,8 @@ namespace Flexinets.Radius.Core.Tests
             packet.AddAttribute("3GPP-IMSI-MCC-MNC", "24001");
             packet.AddAttribute("3GPP-CG-Address", IPAddress.Parse("127.0.0.1"));
 
-            var testPacket = RadiusPacket.Parse(packet.GetBytes(dictionary), dictionary, Encoding.UTF8.GetBytes(secret));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var testPacket = radiusPacketParser.Parse(radiusPacketParser.GetBytes(packet), Encoding.UTF8.GetBytes(secret));
 
             Assert.AreEqual("test@example.com", testPacket.GetAttribute<String>("User-Name"));
             Assert.AreEqual("test", testPacket.GetAttribute<String>("User-Password"));
@@ -225,8 +235,8 @@ namespace Flexinets.Radius.Core.Tests
             var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
             var secret = "xyzzy5461";
 
-            var dictionary = GetDictionary();
-            var requestPacket = RadiusPacket.Parse(Utils.StringToByteArray(request), dictionary, Encoding.UTF8.GetBytes(secret));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestPacket = radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret));
         }
 
 
@@ -239,8 +249,8 @@ namespace Flexinets.Radius.Core.Tests
             var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
             var secret = "xyzzy5461durr";
 
-            var dictionary = GetDictionary();
-            Assert.That(() => RadiusPacket.Parse(Utils.StringToByteArray(request), dictionary, Encoding.UTF8.GetBytes(secret)),
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.That(() => radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret)),
               Throws.TypeOf<InvalidOperationException>());
         }
 
@@ -278,7 +288,9 @@ namespace Flexinets.Radius.Core.Tests
             packet.AddAttribute("User-Name", "nemo");
             packet.AddAttribute("NAS-IP-Address", IPAddress.Parse("192.168.1.16"));
             packet.AddAttribute("NAS-Port", 3);
-            Assert.AreEqual(expected, packet.GetBytes(GetDictionary()).ToHexString());
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.AreEqual(expected, radiusPacketParser.GetBytes(packet).ToHexString());
         }
 
 
@@ -292,8 +304,8 @@ namespace Flexinets.Radius.Core.Tests
             var expected = Utils.StringToByteArray("0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3");
             var secret = "xyzzy5461";
 
-            var dictionary = GetDictionary();
-            var requestPacket = RadiusPacket.Parse(request, dictionary, Encoding.UTF8.GetBytes(secret));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestPacket = radiusPacketParser.Parse(request, Encoding.UTF8.GetBytes(secret));
             Assert.AreEqual(Utils.ToHexString(expected), Utils.ToHexString(request));
         }
     }
