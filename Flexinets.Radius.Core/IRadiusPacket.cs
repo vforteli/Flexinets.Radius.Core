@@ -22,6 +22,10 @@ namespace Flexinets.Radius.Core
         {
             get;
         }
+        Byte[] RequestAuthenticator
+        {
+            get;
+        }
         IRadiusPacket CreateResponsePacket(PacketCode responseCode);
 
         T GetAttribute<T>(String name);
@@ -35,6 +39,5 @@ namespace Flexinets.Radius.Core
         {
             get;
         }
-        Byte[] GetBytes(IRadiusDictionary dictionary);
     }
 }

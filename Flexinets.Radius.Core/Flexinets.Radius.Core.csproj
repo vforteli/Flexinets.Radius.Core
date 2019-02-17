@@ -2,17 +2,16 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
-    <Version>1.4.2.0</Version>
+    <Version>2.0.0</Version>
     <Title>Flexinets.Radius.Core</Title>
     <Authors>Verner Fortelius</Authors>
     <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
-    <Copyright>Copyright 2017 Verner Fortelius</Copyright>
+    <Copyright>Copyright 2019 Verner Fortelius</Copyright>
     <PackageLicenseUrl>https://github.com/vforteli/Flexinets.Radius.Core/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
-    <PackageReleaseNotes>Fix bug when dumping packet bytes with message authenticator</PackageReleaseNotes>
+    <PackageReleaseNotes>Remove dependency on log4net and replace with ILogger.</PackageReleaseNotes>
     <PackageTags>Radius packet parser assembler</PackageTags>
-    <AssemblyVersion>1.4.2.0</AssemblyVersion>
-    <FileVersion>1.4.2.0</FileVersion>
+    <AssemblyVersion>2.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
   </ItemGroup>
 
 </Project>

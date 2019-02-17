@@ -1,4 +1,4 @@
-﻿using log4net;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,14 +11,16 @@ namespace Flexinets.Radius.Core
         internal Dictionary<Byte, DictionaryAttribute> Attributes { get; set; } = new Dictionary<Byte, DictionaryAttribute>();
         internal List<DictionaryVendorAttribute> VendorSpecificAttributes { get; set; } = new List<DictionaryVendorAttribute>();
         internal Dictionary<String, DictionaryAttribute> AttributeNames { get; set; } = new Dictionary<String, DictionaryAttribute>();
-        private readonly ILog _log = LogManager.GetLogger(typeof(RadiusDictionary));
+        private readonly ILogger _logger;
 
 
         /// <summary>
         /// Load the dictionary from a dictionary file
         /// </summary>        
-        public RadiusDictionary(String dictionaryFilePath)
+        public RadiusDictionary(String dictionaryFilePath, ILogger<RadiusDictionary> logger)
         {
+            _logger = logger;
+
             using (var sr = new StreamReader(dictionaryFilePath))
             {
                 while (sr.Peek() >= 0)
@@ -62,7 +64,7 @@ namespace Flexinets.Radius.Core
                     }
                 }
 
-                _log.Info($"Parsed {Attributes.Count} attributes and {VendorSpecificAttributes.Count} vendor attributes from file");
+                _logger.LogInformation($"Parsed {Attributes.Count} attributes and {VendorSpecificAttributes.Count} vendor attributes from file");
             }
         }
 
