@@ -133,7 +133,7 @@ namespace Flexinets.Radius.Core
                 var tempPacket = new Byte[packetBytes.Length];
                 packetBytes.CopyTo(tempPacket, 0);
                 Buffer.BlockCopy(temp, 0, tempPacket, messageAuthenticatorPosition + 2, 16);
-                var calculatedMessageAuthenticator = CalculateMessageAuthenticator(tempPacket, sharedSecret);
+                var calculatedMessageAuthenticator = CalculateMessageAuthenticator(tempPacket, sharedSecret, null);
                 if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
                 {
                     throw new InvalidOperationException($"Invalid Message-Authenticator in packet {packet.Identifier}");
@@ -229,11 +229,19 @@ namespace Flexinets.Radius.Core
         /// https://www.ietf.org/rfc/rfc2869.txt
         /// </summary>
         /// <returns></returns>
-        private Byte[] CalculateMessageAuthenticator(Byte[] packetBytes, Byte[] sharedSecret)
+        private Byte[] CalculateMessageAuthenticator(Byte[] packetBytes, Byte[] sharedSecret, Byte[] requestAuthenticator)
         {
+            var temp = new Byte[packetBytes.Count()];
+            packetBytes.CopyTo(temp, 0);
+
+            if (requestAuthenticator != null)
+            {
+                requestAuthenticator.CopyTo(temp, 4);
+            }
+
             using (var md5 = new HMACMD5(sharedSecret))
             {
-                return md5.ComputeHash(packetBytes);
+                return md5.ComputeHash(temp);
             }
         }
 
@@ -338,25 +346,46 @@ namespace Flexinets.Radius.Core
 
             var packetBytesArray = packetBytes.ToArray();
 
+            // todo refactor this...
             if (packet.Code == PacketCode.AccountingRequest || packet.Code == PacketCode.DisconnectRequest || packet.Code == PacketCode.CoaRequest)
             {
+                if (messageAuthenticatorPosition != 0)
+                {
+                    var temp = new Byte[16];
+                    Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, null);
+                    Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                }
+
                 var authenticator = CalculateRequestAuthenticator(packet.SharedSecret, packetBytesArray);
-                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
+                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);               
             }
-            else
+            else if (packet.Code == PacketCode.StatusServer)
             {
                 var authenticator = packet.RequestAuthenticator != null ? CalculateResponseAuthenticator(packet.SharedSecret, packet.RequestAuthenticator, packetBytesArray) : packet.Authenticator;
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
-            }
 
-            if (messageAuthenticatorPosition != 0)
+                if (messageAuthenticatorPosition != 0)
+                {
+                    var temp = new Byte[16];
+                    Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, packet.RequestAuthenticator);
+                    Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                }              
+            }
+            else
             {
-                var temp = new Byte[16];
-                Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
-                var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret);
-                Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
-            }
+                if (messageAuthenticatorPosition != 0)
+                {
+                    var temp = new Byte[16];
+                    Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, packet.RequestAuthenticator);
+                    Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
+                }
 
+                var authenticator = packet.RequestAuthenticator != null ? CalculateResponseAuthenticator(packet.SharedSecret, packet.RequestAuthenticator, packetBytesArray) : packet.Authenticator;
+                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
+            }
 
             return packetBytesArray;
         }

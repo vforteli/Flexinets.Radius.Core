@@ -105,7 +105,7 @@ namespace Flexinets.Radius.Core.Tests
 
 
         /// <summary>
-        /// Create disconnect request packet and verify bytes
+        /// Create status server request packet and verify bytes
         /// </summary>
         [TestCase]
         public void TestCreateStatusServerRequestPacket()
@@ -115,6 +115,23 @@ namespace Flexinets.Radius.Core.Tests
 
             var packet = new RadiusPacket(PacketCode.StatusServer, 218, secret);
             packet.Authenticator = Utils.StringToByteArray("8a54f4686fb394c52866e302185d0623");
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.AreEqual(expected, radiusPacketParser.GetBytes(packet).ToHexString());
+        }
+
+
+        /// <summary>
+        /// Create status server request packet and verify bytes
+        /// </summary>
+        [TestCase]
+        public void TestCreateStatusServerRequestPacketAccounting()
+        {
+            var expected = "0cb30026925f6b66dd5fed571fcb1db7ad3882605012e8d6eabda910875cd91fdade26367858";
+            var secret = "xyzzy5461";
+
+            var packet = new RadiusPacket(PacketCode.StatusServer, 179, secret);
+            packet.Authenticator = Utils.StringToByteArray("925f6b66dd5fed571fcb1db7ad388260");
 
             var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
             Assert.AreEqual(expected, radiusPacketParser.GetBytes(packet).ToHexString());
@@ -307,6 +324,25 @@ namespace Flexinets.Radius.Core.Tests
             var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
             var requestPacket = radiusPacketParser.Parse(request, Encoding.UTF8.GetBytes(secret));
             Assert.AreEqual(Utils.ToHexString(expected), Utils.ToHexString(request));
+        }
+
+
+        [TestCase]
+        public void TestMessageAuthenticatorResponsePacket()
+        {
+            var expected = "0368002c71624da25c0b5897f70539e019a81eae4f06046700045012ce70fe87a997b44de583cd19bea29321";
+            var secret = "testing123";
+
+            var response = new RadiusPacket(PacketCode.AccessReject, 104, secret)
+            {
+                RequestAuthenticator = Utils.StringToByteArray("b3e22ff855a690280e6c3444c46e663b")
+            };
+
+            response.AddAttribute("EAP-Message", Utils.StringToByteArray("04670004"));
+            response.AddAttribute("Message-Authenticator", new Byte[16]);
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.AreEqual(expected, radiusPacketParser.GetBytes(response).ToHexString());
         }
     }
 }
