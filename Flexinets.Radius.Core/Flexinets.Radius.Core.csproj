@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net47</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net472</TargetFrameworks>
     <Version>2.0.0</Version>
     <Title>Flexinets.Radius.Core</Title>
     <Authors>Verner Fortelius</Authors>
@@ -12,6 +12,7 @@
     <PackageReleaseNotes>Remove dependency on log4net and replace with ILogger.</PackageReleaseNotes>
     <PackageTags>Radius packet parser assembler</PackageTags>
     <AssemblyVersion>2.0.0</AssemblyVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
