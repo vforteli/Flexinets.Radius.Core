@@ -1,0 +1,14 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
