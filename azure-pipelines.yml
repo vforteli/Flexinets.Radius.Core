@@ -4,6 +4,9 @@ trigger:
 pool:
   vmImage: 'windows-latest'
 
+variables:
+  BuildConfiguration: 'Release'
+
 steps:
   - task: DotNetCoreCLI@2
     displayName: Restore
@@ -30,3 +33,14 @@ steps:
       codeCoverageTool: 'Cobertura'
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/Flexinets.Radius.Core.Tests/coverage.cobertura.xml'
       failIfCoverageEmpty: true
+
+  - task: DotNetCoreCLI@2
+    displayName: Pack
+    inputs:
+      command: 'pack'
+      packagesToPack: '**/*.csproj'
+      nobuild: true
+      includesymbols: true
+      versioningScheme: 'off'
+      arguments: --configuration $(BuildConfiguration) --no-restore --include-symbols --no-build
+      packDirectory: '$(Build.ArtifactStagingDirectory)/packages'
