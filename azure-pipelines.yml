@@ -23,3 +23,10 @@ steps:
       command: 'test'
       projects: '*.sln'
       arguments: '--no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: Publish coverage results
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/Flexinets.Radius.Core.Tests/coverage.cobertura.xml'
+      failIfCoverageEmpty: true
