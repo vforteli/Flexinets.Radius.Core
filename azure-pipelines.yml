@@ -6,16 +6,20 @@ pool:
 
 steps:
   - task: DotNetCoreCLI@2
+    displayName: Restore
     inputs:
       command: 'restore'
       feedsToUse: 'select'
 
   - task: DotNetCoreCLI@2
+    displayName: Build
     inputs:
       command: 'build'
       arguments: '--no-restore'
 
   - task: DotNetCoreCLI@2
+    displayName: Test
     inputs:
       command: 'test'
+      projects: '*.sln'
       arguments: '--no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
