@@ -1,6 +1,6 @@
 # Radius packet parser and assembler library for .Net.   
 
-[![Build status](https://dev.azure.com/tikali/Flexinets.Radius/_apis/build/repos/github/badge?repoId=vforteli/flexinets.radius.core&branchName=master&api-version=6.0-preview.2)](https://dev.azure.com/tikali/Flexinets.Radius/_apis/build/repos/github/badge?repoId=vforteli/flexinets.radius.core&branchName=master&api-version=6.0-preview.2)
+[![Build Status](https://tikali.visualstudio.com/Flexinets.Radius/_apis/build/status/vforteli.Flexinets.Radius.Core?branchName=master)](https://tikali.visualstudio.com/Flexinets.Radius/_build/latest?definitionId=1&branchName=master)
 
 Includes Core functionality for parsing and assembling Radius packets using a dictionary
 
