@@ -18,14 +18,14 @@ steps:
     displayName: Build
     inputs:
       command: 'build'
-      arguments: '--no-restore'
+      arguments: '--configuration $(BuildConfiguration) --no-restore'
 
   - task: DotNetCoreCLI@2
     displayName: Test
     inputs:
       command: 'test'
       projects: '*.sln'
-      arguments: '--no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
+      arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
 
   - task: PublishCodeCoverageResults@1
     displayName: Publish coverage results
