@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -293,8 +294,6 @@ namespace Flexinets.Radius.Core.Tests
         {
             var secret = "xyzzy5461";
 
-            var dictionary = GetDictionary();
-
             var packet = new RadiusPacket(PacketCode.AccessRequest, 1, secret);
             packet.AddAttribute("User-Name", "test@example.com");
             packet.AddAttribute("User-Password", "test");
@@ -309,9 +308,30 @@ namespace Flexinets.Radius.Core.Tests
             Assert.AreEqual("test@example.com", testPacket.GetAttribute<string>("User-Name"));
             Assert.AreEqual("test", testPacket.GetAttribute<string>("User-Password"));
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttribute<IPAddress>("NAS-IP-Address"));
+            Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttributes<IPAddress>("NAS-IP-Address").First());   // this should actually be tested with EAP-Message attributes
             Assert.AreEqual(100, testPacket.GetAttribute<uint>("NAS-Port"));
             Assert.AreEqual("24001", testPacket.GetAttribute<string>("3GPP-IMSI-MCC-MNC"));
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttribute<IPAddress>("3GPP-CG-Address"));
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
+        public void TestCreatingMissingAttributes()
+        {
+            var secret = "xyzzy5461";
+
+            var packet = new RadiusPacket(PacketCode.AccessRequest, 1, secret);
+            packet.AddAttribute("User-Name", "test@example.com");
+            packet.AddAttribute("User-Password", "test");
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var testPacket = radiusPacketParser.Parse(radiusPacketParser.GetBytes(packet), Encoding.UTF8.GetBytes(secret));
+
+            Assert.IsNull(testPacket.GetAttribute<uint?>("NAS-Port"));
+            Assert.AreEqual(0, testPacket.GetAttributes<uint>("NAS-Port").Count);
         }
 
 

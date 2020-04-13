@@ -29,6 +29,8 @@ namespace Flexinets.Radius.Core
 
         T GetAttribute<T>(string name);
 
+        List<T> GetAttributes<T>(string name);
+
         void AddAttribute(string name, string value);
         void AddAttribute(string name, uint value);
         void AddAttribute(string name, IPAddress value);

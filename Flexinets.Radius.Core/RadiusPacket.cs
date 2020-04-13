@@ -101,7 +101,7 @@ namespace Flexinets.Radius.Core
                 return (T)Attributes[name].Single();
             }
 
-            return default(T);
+            return default;
         }
 
 
