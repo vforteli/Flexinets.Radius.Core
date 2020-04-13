@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
@@ -17,19 +16,19 @@ namespace Flexinets.Radius.Core
             get;
             internal set;
         }
-        public Byte Identifier
+        public byte Identifier
         {
             get;
             internal set;
         }
-        public Byte[] Authenticator { get; internal set; } = new Byte[16];
-        public IDictionary<String, List<Object>> Attributes { get; set; } = new Dictionary<String, List<Object>>();
-        public Byte[] SharedSecret
+        public byte[] Authenticator { get; internal set; } = new byte[16];
+        public IDictionary<string, List<object>> Attributes { get; set; } = new Dictionary<string, List<object>>();
+        public byte[] SharedSecret
         {
             get;
             internal set;
         }
-        public Byte[] RequestAuthenticator
+        public byte[] RequestAuthenticator
         {
             get;
             internal set;
@@ -48,7 +47,7 @@ namespace Flexinets.Radius.Core
         /// <param name="identifier"></param>
         /// <param name="secret"></param>
         /// <param name="authenticator">Set authenticator for testing</param>
-        public RadiusPacket(PacketCode code, Byte identifier, String secret)
+        public RadiusPacket(PacketCode code, byte identifier, string secret)
         {
             Code = code;
             Identifier = identifier;
@@ -66,7 +65,7 @@ namespace Flexinets.Radius.Core
             // A Message authenticator is required in status server packets, calculated last
             if (Code == PacketCode.StatusServer)
             {
-                AddAttribute("Message-Authenticator", new Byte[16]);
+                AddAttribute("Message-Authenticator", new byte[16]);
             }
         }
 
@@ -95,7 +94,7 @@ namespace Flexinets.Radius.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
         /// <returns></returns>
-        public T GetAttribute<T>(String name)
+        public T GetAttribute<T>(string name)
         {
             if (Attributes.ContainsKey(name))
             {
@@ -112,7 +111,7 @@ namespace Flexinets.Radius.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
         /// <returns></returns>
-        public List<T> GetAttributes<T>(String name)
+        public List<T> GetAttributes<T>(string name)
         {
             if (Attributes.ContainsKey(name))
             {
@@ -122,28 +121,28 @@ namespace Flexinets.Radius.Core
         }
 
 
-        public void AddAttribute(String name, String value)
+        public void AddAttribute(string name, string value)
         {
             AddAttributeObject(name, value);
         }
-        public void AddAttribute(String name, UInt32 value)
+        public void AddAttribute(string name, uint value)
         {
             AddAttributeObject(name, value);
         }
-        public void AddAttribute(String name, IPAddress value)
+        public void AddAttribute(string name, IPAddress value)
         {
             AddAttributeObject(name, value);
         }
-        public void AddAttribute(String name, Byte[] value)
+        public void AddAttribute(string name, byte[] value)
         {
             AddAttributeObject(name, value);
         }
 
-        internal void AddAttributeObject(String name, Object value)
+        internal void AddAttributeObject(string name, object value)
         {
             if (!Attributes.ContainsKey(name))
             {
-                Attributes.Add(name, new List<Object>());
+                Attributes.Add(name, new List<object>());
             }
             Attributes[name].Add(value);
         }

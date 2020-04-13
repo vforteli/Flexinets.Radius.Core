@@ -234,11 +234,11 @@ namespace Flexinets.Radius.Core.Tests
             var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
             var testPacket = radiusPacketParser.Parse(radiusPacketParser.GetBytes(packet), Encoding.UTF8.GetBytes(secret));
 
-            Assert.AreEqual("test@example.com", testPacket.GetAttribute<String>("User-Name"));
-            Assert.AreEqual("test", testPacket.GetAttribute<String>("User-Password"));
+            Assert.AreEqual("test@example.com", testPacket.GetAttribute<string>("User-Name"));
+            Assert.AreEqual("test", testPacket.GetAttribute<string>("User-Password"));
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttribute<IPAddress>("NAS-IP-Address"));
-            Assert.AreEqual(100, testPacket.GetAttribute<UInt32>("NAS-Port"));
-            Assert.AreEqual("24001", testPacket.GetAttribute<String>("3GPP-IMSI-MCC-MNC"));
+            Assert.AreEqual(100, testPacket.GetAttribute<uint>("NAS-Port"));
+            Assert.AreEqual("24001", testPacket.GetAttribute<string>("3GPP-IMSI-MCC-MNC"));
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttribute<IPAddress>("3GPP-CG-Address"));
         }
 
@@ -277,7 +277,7 @@ namespace Flexinets.Radius.Core.Tests
         /// </summary>
         [TestCase("123456789")]
         [TestCase("12345678901234567890")]
-        public void TestPasswordEncryptDecrypt(String password)
+        public void TestPasswordEncryptDecrypt(string password)
         {
             var secret = "xyzzy5461";
             var authenticator = "1234567890123456";
@@ -339,7 +339,7 @@ namespace Flexinets.Radius.Core.Tests
             };
 
             response.AddAttribute("EAP-Message", Utils.StringToByteArray("04670004"));
-            response.AddAttribute("Message-Authenticator", new Byte[16]);
+            response.AddAttribute("Message-Authenticator", new byte[16]);
 
             var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
             Assert.AreEqual(expected, radiusPacketParser.GetBytes(response).ToHexString());

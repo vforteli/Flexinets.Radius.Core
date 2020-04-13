@@ -8,16 +8,16 @@ namespace Flexinets.Radius.Core
 {
     public class RadiusDictionary : IRadiusDictionary
     {
-        internal Dictionary<Byte, DictionaryAttribute> Attributes { get; set; } = new Dictionary<Byte, DictionaryAttribute>();
+        internal Dictionary<byte, DictionaryAttribute> Attributes { get; set; } = new Dictionary<byte, DictionaryAttribute>();
         internal List<DictionaryVendorAttribute> VendorSpecificAttributes { get; set; } = new List<DictionaryVendorAttribute>();
-        internal Dictionary<String, DictionaryAttribute> AttributeNames { get; set; } = new Dictionary<String, DictionaryAttribute>();
+        internal Dictionary<string, DictionaryAttribute> AttributeNames { get; set; } = new Dictionary<string, DictionaryAttribute>();
         private readonly ILogger _logger;
 
 
         /// <summary>
         /// Load the dictionary from a dictionary file
         /// </summary>        
-        public RadiusDictionary(String dictionaryFilePath, ILogger<RadiusDictionary> logger)
+        public RadiusDictionary(string dictionaryFilePath, ILogger<RadiusDictionary> logger)
         {
             _logger = logger;
 
