@@ -35,9 +35,9 @@ namespace Flexinets.Radius.Core
         public IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret)
         {
             var packetLength = BitConverter.ToUInt16(packetBytes.Skip(2).Take(2).Reverse().ToArray(), 0);
-            if (packetBytes.Length != packetLength)
+            if (packetBytes.Length < packetLength)
             {
-                throw new InvalidOperationException($"Packet length does not match, expected: {packetLength}, actual: {packetBytes.Length}");
+                throw new ArgumentOutOfRangeException(nameof(packetBytes), $"Packet length mismatch, expected: {packetLength}, actual: {packetBytes.Length}");
             }
 
             var packet = new RadiusPacket
@@ -60,15 +60,11 @@ namespace Flexinets.Radius.Core
             // The rest are attribute value pairs
             var position = 20;
             var messageAuthenticatorPosition = 0;
-            while (position < packetBytes.Length)
+            while (position < packetLength)
             {
                 var typecode = packetBytes[position];
                 var length = packetBytes[position + 1];
 
-                if (position + length > packetLength)
-                {
-                    throw new ArgumentOutOfRangeException("Go home roamserver, youre drunk");
-                }
                 var contentBytes = new byte[length - 2];
                 Buffer.BlockCopy(packetBytes, position + 2, contentBytes, 0, length - 2);
 
@@ -130,8 +126,8 @@ namespace Flexinets.Radius.Core
             {
                 var messageAuthenticator = packet.GetAttribute<byte[]>("Message-Authenticator");
                 var temp = new byte[16];
-                var tempPacket = new byte[packetBytes.Length];
-                packetBytes.CopyTo(tempPacket, 0);
+                var tempPacket = new byte[packetLength];
+                Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);
                 Buffer.BlockCopy(temp, 0, tempPacket, messageAuthenticatorPosition + 2, 16);
                 var calculatedMessageAuthenticator = CalculateMessageAuthenticator(tempPacket, sharedSecret, null);
                 if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
@@ -149,10 +145,9 @@ namespace Flexinets.Radius.Core
         /// Returns false if no packet could be parsed or stream is empty ie closing
         /// </summary>
         /// <param name="stream"></param>
-        /// <param name="packet"></param>
-        /// <param name="dictionary"></param>
+        /// <param name="packet"></param>        
         /// <returns></returns>
-        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, IRadiusDictionary dictionary, byte[] sharedSecret)
+        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, byte[] sharedSecret)
         {
             var packetHeaderBytes = new byte[4];
             var i = stream.Read(packetHeaderBytes, 0, 4);
@@ -162,7 +157,7 @@ namespace Flexinets.Radius.Core
                 {
                     var packetLength = BitConverter.ToUInt16(packetHeaderBytes.Reverse().ToArray(), 0);
                     var packetContentBytes = new byte[packetLength - 4];
-                    stream.Read(packetContentBytes, 0, packetContentBytes.Length);
+                    stream.Read(packetContentBytes, 0, packetContentBytes.Length);  // todo stream.read should use loop in case everything is not available immediately
 
                     packet = Parse(packetHeaderBytes.Concat(packetContentBytes).ToArray(), sharedSecret);
                     return true;

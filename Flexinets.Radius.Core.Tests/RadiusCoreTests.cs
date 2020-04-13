@@ -217,6 +217,78 @@ namespace Flexinets.Radius.Core.Tests
         /// Test parsing and rebuilding a packet
         /// </summary>
         [TestCase]
+        public void TestPacketParserAndAssemblerStream()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
+            var expected = request;
+            var secret = Encoding.UTF8.GetBytes("xyzzy5461");
+
+            var stream = new MemoryStream(Utils.StringToByteArray(request));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var result = radiusPacketParser.TryParsePacketFromStream(stream, out var packet, secret);
+            var bytes = radiusPacketParser.GetBytes(packet);
+
+            Assert.AreEqual(expected, bytes.ToHexString());
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
+        public void TestPacketParserAndAssemblerStreamExtraDataIgnored()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3ff00ff00ff00ff";
+            var expected = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
+            var secret = Encoding.UTF8.GetBytes("xyzzy5461");
+
+            var stream = new MemoryStream(Utils.StringToByteArray(request));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var result = radiusPacketParser.TryParsePacketFromStream(stream, out var packet, secret);
+            var bytes = radiusPacketParser.GetBytes(packet);
+
+            Assert.AreEqual(expected, bytes.ToHexString());
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
+        public void TestPacketParserAndAssemblerExtraDataIgnored()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa300ff00ff00ff";
+            var expected = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
+            var secret = "xyzzy5461";
+
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestPacket = radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret));
+            var bytes = radiusPacketParser.GetBytes(requestPacket);
+
+            Assert.AreEqual(expected, bytes.ToHexString());
+        }
+
+
+        /// <summary>
+        /// Test parsing packet with missing data
+        /// </summary>
+        [TestCase]
+        public void TestPacketParserMissingData()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84f";
+            var expected = request;
+            var secret = "xyzzy5461";
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.Throws<ArgumentOutOfRangeException>(() => radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret)));
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
         public void TestCreatingAndParsingPacket()
         {
             var secret = "xyzzy5461";
