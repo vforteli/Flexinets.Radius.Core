@@ -1,12 +1,10 @@
-﻿using System;
-
-namespace Flexinets.Radius.Core
+﻿namespace Flexinets.Radius.Core
 {
     public class DictionaryAttribute
     {
-        public readonly Byte Code;
-        public readonly String Name;
-        public readonly String Type;
+        public readonly byte Code;
+        public readonly string Name;
+        public readonly string Type;
 
         /// <summary>
         /// Create a dictionary rfc attribute
@@ -14,7 +12,7 @@ namespace Flexinets.Radius.Core
         /// <param name="name"></param>
         /// <param name="code"></param>
         /// <param name="type"></param>
-        public DictionaryAttribute(String name, Byte code, String type)
+        public DictionaryAttribute(string name, byte code, string type)
         {
             Code = code;
             Name = name;

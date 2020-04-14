@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -217,11 +218,81 @@ namespace Flexinets.Radius.Core.Tests
         /// Test parsing and rebuilding a packet
         /// </summary>
         [TestCase]
+        public void TestPacketParserAndAssemblerStream()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
+            var expected = request;
+            var secret = Encoding.UTF8.GetBytes("xyzzy5461");
+
+            var stream = new MemoryStream(Utils.StringToByteArray(request));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var result = radiusPacketParser.TryParsePacketFromStream(stream, out var packet, secret);
+            var bytes = radiusPacketParser.GetBytes(packet);
+
+            Assert.AreEqual(expected, bytes.ToHexString());
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
+        public void TestPacketParserAndAssemblerStreamExtraDataIgnored()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3ff00ff00ff00ff";
+            var expected = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
+            var secret = Encoding.UTF8.GetBytes("xyzzy5461");
+
+            var stream = new MemoryStream(Utils.StringToByteArray(request));
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var result = radiusPacketParser.TryParsePacketFromStream(stream, out var packet, secret);
+            var bytes = radiusPacketParser.GetBytes(packet);
+
+            Assert.AreEqual(expected, bytes.ToHexString());
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
+        public void TestPacketParserAndAssemblerExtraDataIgnored()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa300ff00ff00ff";
+            var expected = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
+            var secret = "xyzzy5461";
+
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var requestPacket = radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret));
+            var bytes = radiusPacketParser.GetBytes(requestPacket);
+
+            Assert.AreEqual(expected, bytes.ToHexString());
+        }
+
+
+        /// <summary>
+        /// Test parsing packet with missing data
+        /// </summary>
+        [TestCase]
+        public void TestPacketParserMissingData()
+        {
+            var request = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84f";
+            var expected = request;
+            var secret = "xyzzy5461";
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            Assert.Throws<ArgumentOutOfRangeException>(() => radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret)));
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
         public void TestCreatingAndParsingPacket()
         {
             var secret = "xyzzy5461";
-
-            var dictionary = GetDictionary();
 
             var packet = new RadiusPacket(PacketCode.AccessRequest, 1, secret);
             packet.AddAttribute("User-Name", "test@example.com");
@@ -234,12 +305,33 @@ namespace Flexinets.Radius.Core.Tests
             var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
             var testPacket = radiusPacketParser.Parse(radiusPacketParser.GetBytes(packet), Encoding.UTF8.GetBytes(secret));
 
-            Assert.AreEqual("test@example.com", testPacket.GetAttribute<String>("User-Name"));
-            Assert.AreEqual("test", testPacket.GetAttribute<String>("User-Password"));
+            Assert.AreEqual("test@example.com", testPacket.GetAttribute<string>("User-Name"));
+            Assert.AreEqual("test", testPacket.GetAttribute<string>("User-Password"));
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttribute<IPAddress>("NAS-IP-Address"));
-            Assert.AreEqual(100, testPacket.GetAttribute<UInt32>("NAS-Port"));
-            Assert.AreEqual("24001", testPacket.GetAttribute<String>("3GPP-IMSI-MCC-MNC"));
+            Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttributes<IPAddress>("NAS-IP-Address").First());   // this should actually be tested with EAP-Message attributes
+            Assert.AreEqual(100, testPacket.GetAttribute<uint>("NAS-Port"));
+            Assert.AreEqual("24001", testPacket.GetAttribute<string>("3GPP-IMSI-MCC-MNC"));
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), testPacket.GetAttribute<IPAddress>("3GPP-CG-Address"));
+        }
+
+
+        /// <summary>
+        /// Test parsing and rebuilding a packet
+        /// </summary>
+        [TestCase]
+        public void TestCreatingMissingAttributes()
+        {
+            var secret = "xyzzy5461";
+
+            var packet = new RadiusPacket(PacketCode.AccessRequest, 1, secret);
+            packet.AddAttribute("User-Name", "test@example.com");
+            packet.AddAttribute("User-Password", "test");
+
+            var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+            var testPacket = radiusPacketParser.Parse(radiusPacketParser.GetBytes(packet), Encoding.UTF8.GetBytes(secret));
+
+            Assert.IsNull(testPacket.GetAttribute<uint?>("NAS-Port"));
+            Assert.AreEqual(0, testPacket.GetAttributes<uint>("NAS-Port").Count);
         }
 
 
@@ -277,7 +369,7 @@ namespace Flexinets.Radius.Core.Tests
         /// </summary>
         [TestCase("123456789")]
         [TestCase("12345678901234567890")]
-        public void TestPasswordEncryptDecrypt(String password)
+        public void TestPasswordEncryptDecrypt(string password)
         {
             var secret = "xyzzy5461";
             var authenticator = "1234567890123456";
@@ -339,7 +431,7 @@ namespace Flexinets.Radius.Core.Tests
             };
 
             response.AddAttribute("EAP-Message", Utils.StringToByteArray("04670004"));
-            response.AddAttribute("Message-Authenticator", new Byte[16]);
+            response.AddAttribute("Message-Authenticator", new byte[16]);
 
             var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
             Assert.AreEqual(expected, radiusPacketParser.GetBytes(response).ToHexString());

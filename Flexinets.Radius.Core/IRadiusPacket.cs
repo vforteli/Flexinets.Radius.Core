@@ -1,20 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net;
 
 namespace Flexinets.Radius.Core
 {
     public interface IRadiusPacket
     {
-        Byte Identifier
+        byte Identifier
         {
             get;
         }
-        Byte[] Authenticator
+        byte[] Authenticator
         {
             get;
         }
-        Byte[] SharedSecret
+        byte[] SharedSecret
         {
             get;
         }
@@ -22,20 +21,22 @@ namespace Flexinets.Radius.Core
         {
             get;
         }
-        Byte[] RequestAuthenticator
+        byte[] RequestAuthenticator
         {
             get;
         }
         IRadiusPacket CreateResponsePacket(PacketCode responseCode);
 
-        T GetAttribute<T>(String name);
+        T GetAttribute<T>(string name);
 
-        void AddAttribute(String name, String value);
-        void AddAttribute(String name, UInt32 value);
-        void AddAttribute(String name, IPAddress value);
-        void AddAttribute(String name, Byte[] value);
+        List<T> GetAttributes<T>(string name);
 
-        IDictionary<String, List<Object>> Attributes
+        void AddAttribute(string name, string value);
+        void AddAttribute(string name, uint value);
+        void AddAttribute(string name, IPAddress value);
+        void AddAttribute(string name, byte[] value);
+
+        IDictionary<string, List<object>> Attributes
         {
             get;
         }

@@ -13,12 +13,12 @@ namespace Flexinets.Radius.Core
         /// <param name="input"></param>
         /// <param name="key"></param>
         /// <returns></returns>
-        private static Byte[] EncryptDecrypt(Byte[] input, Byte[] key)
+        private static byte[] EncryptDecrypt(byte[] input, byte[] key)
         {
-            var output = new Byte[input.Length];
+            var output = new byte[input.Length];
             for (int i = 0; i < input.Length; i++)
             {
-                output[i] = (Byte)(input[i] ^ key[i]);
+                output[i] = (byte)(input[i] ^ key[i]);
             }
             return output;
         }
@@ -30,9 +30,9 @@ namespace Flexinets.Radius.Core
         /// <param name="sharedSecret"></param>
         /// <param name="Stuff"></param>
         /// <returns></returns>
-        private static Byte[] CreateKey(Byte[] sharedSecret, Byte[] authenticator)
+        private static byte[] CreateKey(byte[] sharedSecret, byte[] authenticator)
         {
-            var key = new Byte[16 + sharedSecret.Length];
+            var key = new byte[16 + sharedSecret.Length];
             Buffer.BlockCopy(sharedSecret, 0, key, 0, sharedSecret.Length);
             Buffer.BlockCopy(authenticator, 0, key, sharedSecret.Length, authenticator.Length);
 
@@ -50,14 +50,14 @@ namespace Flexinets.Radius.Core
         /// <param name="authenticator"></param>
         /// <param name="passwordBytes"></param>
         /// <returns></returns>
-        public static String Decrypt(Byte[] sharedSecret, Byte[] authenticator, Byte[] passwordBytes)
+        public static string Decrypt(byte[] sharedSecret, byte[] authenticator, byte[] passwordBytes)
         {
             var sb = new StringBuilder();
             var key = CreateKey(sharedSecret, authenticator);
 
             for (var n = 1; n <= passwordBytes.Length / 16; n++)
             {
-                var temp = new Byte[16];
+                var temp = new byte[16];
                 Buffer.BlockCopy(passwordBytes, (n - 1) * 16, temp, 0, 16);
                 sb.Append(Encoding.UTF8.GetString(EncryptDecrypt(temp, key)));
                 key = CreateKey(sharedSecret, temp);
@@ -74,15 +74,15 @@ namespace Flexinets.Radius.Core
         /// <param name="authenticator"></param>
         /// <param name="passwordBytes"></param>
         /// <returns></returns>
-        public static Byte[] Encrypt(Byte[] sharedSecret, Byte[] authenticator, Byte[] passwordBytes)
+        public static byte[] Encrypt(byte[] sharedSecret, byte[] authenticator, byte[] passwordBytes)
         {
             Array.Resize(ref passwordBytes, passwordBytes.Length + (16 - (passwordBytes.Length % 16)));
 
             var key = CreateKey(sharedSecret, authenticator);
-            var bytes = new List<Byte>();
+            var bytes = new List<byte>();
             for (var n = 1; n <= passwordBytes.Length / 16; n++)
             {
-                var temp = new Byte[16];
+                var temp = new byte[16];
                 Buffer.BlockCopy(passwordBytes, (n - 1) * 16, temp, 0, 16);
                 var xor = EncryptDecrypt(temp, key);
                 bytes.AddRange(xor);

@@ -32,12 +32,12 @@ namespace Flexinets.Radius.Core
         /// <param name="packetBytes"></param>
         /// <param name="dictionary"></param>
         /// <param name="sharedSecret"></param>
-        public IRadiusPacket Parse(Byte[] packetBytes, Byte[] sharedSecret)
+        public IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret)
         {
             var packetLength = BitConverter.ToUInt16(packetBytes.Skip(2).Take(2).Reverse().ToArray(), 0);
-            if (packetBytes.Length != packetLength)
+            if (packetBytes.Length < packetLength)
             {
-                throw new InvalidOperationException($"Packet length does not match, expected: {packetLength}, actual: {packetBytes.Length}");
+                throw new ArgumentOutOfRangeException(nameof(packetBytes), $"Packet length mismatch, expected: {packetLength}, actual: {packetBytes.Length}");
             }
 
             var packet = new RadiusPacket
@@ -60,16 +60,12 @@ namespace Flexinets.Radius.Core
             // The rest are attribute value pairs
             var position = 20;
             var messageAuthenticatorPosition = 0;
-            while (position < packetBytes.Length)
+            while (position < packetLength)
             {
                 var typecode = packetBytes[position];
                 var length = packetBytes[position + 1];
 
-                if (position + length > packetLength)
-                {
-                    throw new ArgumentOutOfRangeException("Go home roamserver, youre drunk");
-                }
-                var contentBytes = new Byte[length - 2];
+                var contentBytes = new byte[length - 2];
                 Buffer.BlockCopy(packetBytes, position + 2, contentBytes, 0, length - 2);
 
                 try
@@ -128,10 +124,10 @@ namespace Flexinets.Radius.Core
 
             if (messageAuthenticatorPosition != 0)
             {
-                var messageAuthenticator = packet.GetAttribute<Byte[]>("Message-Authenticator");
-                var temp = new Byte[16];
-                var tempPacket = new Byte[packetBytes.Length];
-                packetBytes.CopyTo(tempPacket, 0);
+                var messageAuthenticator = packet.GetAttribute<byte[]>("Message-Authenticator");
+                var temp = new byte[16];
+                var tempPacket = new byte[packetLength];
+                Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);
                 Buffer.BlockCopy(temp, 0, tempPacket, messageAuthenticatorPosition + 2, 16);
                 var calculatedMessageAuthenticator = CalculateMessageAuthenticator(tempPacket, sharedSecret, null);
                 if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
@@ -149,20 +145,19 @@ namespace Flexinets.Radius.Core
         /// Returns false if no packet could be parsed or stream is empty ie closing
         /// </summary>
         /// <param name="stream"></param>
-        /// <param name="packet"></param>
-        /// <param name="dictionary"></param>
+        /// <param name="packet"></param>        
         /// <returns></returns>
-        public Boolean TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, IRadiusDictionary dictionary, Byte[] sharedSecret)
+        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, byte[] sharedSecret)
         {
-            var packetHeaderBytes = new Byte[4];
+            var packetHeaderBytes = new byte[4];
             var i = stream.Read(packetHeaderBytes, 0, 4);
             if (i != 0)
             {
                 try
                 {
                     var packetLength = BitConverter.ToUInt16(packetHeaderBytes.Reverse().ToArray(), 0);
-                    var packetContentBytes = new Byte[packetLength - 4];
-                    stream.Read(packetContentBytes, 0, packetContentBytes.Length);
+                    var packetContentBytes = new byte[packetLength - 4];
+                    stream.Read(packetContentBytes, 0, packetContentBytes.Length);  // todo stream.read should use loop in case everything is not available immediately
 
                     packet = Parse(packetHeaderBytes.Concat(packetContentBytes).ToArray(), sharedSecret);
                     return true;
@@ -187,7 +182,7 @@ namespace Flexinets.Radius.Core
         /// <param name="authenticator"></param>
         /// <param name="sharedSecret"></param>
         /// <returns></returns>
-        private Object ParseContentBytes(Byte[] contentBytes, String type, UInt32 code, Byte[] authenticator, Byte[] sharedSecret)
+        private object ParseContentBytes(byte[] contentBytes, string type, uint code, byte[] authenticator, byte[] sharedSecret)
         {
             switch (type)
             {
@@ -229,9 +224,9 @@ namespace Flexinets.Radius.Core
         /// https://www.ietf.org/rfc/rfc2869.txt
         /// </summary>
         /// <returns></returns>
-        private Byte[] CalculateMessageAuthenticator(Byte[] packetBytes, Byte[] sharedSecret, Byte[] requestAuthenticator)
+        private byte[] CalculateMessageAuthenticator(byte[] packetBytes, byte[] sharedSecret, byte[] requestAuthenticator)
         {
-            var temp = new Byte[packetBytes.Count()];
+            var temp = new byte[packetBytes.Count()];
             packetBytes.CopyTo(temp, 0);
 
             if (requestAuthenticator != null)
@@ -255,7 +250,7 @@ namespace Flexinets.Radius.Core
         /// <param name="requestAuthenticator"></param>
         /// <param name="packetBytes"></param>
         /// <returns>Response authenticator for the packet</returns>
-        private Byte[] CalculateResponseAuthenticator(Byte[] sharedSecret, Byte[] requestAuthenticator, Byte[] packetBytes)
+        private byte[] CalculateResponseAuthenticator(byte[] sharedSecret, byte[] requestAuthenticator, byte[] packetBytes)
         {
             var responseAuthenticator = packetBytes.Concat(sharedSecret).ToArray();
             Buffer.BlockCopy(requestAuthenticator, 0, responseAuthenticator, 4, 16);
@@ -273,9 +268,9 @@ namespace Flexinets.Radius.Core
         /// <param name="sharedSecret"></param>
         /// <param name="packetBytes"></param>
         /// <returns></returns>
-        internal Byte[] CalculateRequestAuthenticator(Byte[] sharedSecret, Byte[] packetBytes)
+        internal byte[] CalculateRequestAuthenticator(byte[] sharedSecret, byte[] packetBytes)
         {
-            return CalculateResponseAuthenticator(sharedSecret, new Byte[16], packetBytes);
+            return CalculateResponseAuthenticator(sharedSecret, new byte[16], packetBytes);
         }
 
 
@@ -283,14 +278,14 @@ namespace Flexinets.Radius.Core
         /// Get the raw packet bytes
         /// </summary>
         /// <returns></returns>
-        public Byte[] GetBytes(IRadiusPacket packet)
+        public byte[] GetBytes(IRadiusPacket packet)
         {
-            var packetBytes = new List<Byte>
+            var packetBytes = new List<byte>
             {
-                (Byte)packet.Code,
+                (byte)packet.Code,
                 packet.Identifier
             };
-            packetBytes.AddRange(new Byte[18]); // Placeholder for length and authenticator
+            packetBytes.AddRange(new byte[18]); // Placeholder for length and authenticator
 
             var messageAuthenticatorPosition = 0;
             foreach (var attribute in packet.Attributes)
@@ -299,20 +294,20 @@ namespace Flexinets.Radius.Core
                 foreach (var value in attribute.Value)
                 {
                     var contentBytes = GetAttributeValueBytes(value);
-                    var headerBytes = new Byte[2];
+                    var headerBytes = new byte[2];
 
                     var attributeType = _radiusDictionary.GetAttribute(attribute.Key);
                     switch (attributeType)
                     {
                         case DictionaryVendorAttribute _attributeType:
-                            headerBytes = new Byte[8];
+                            headerBytes = new byte[8];
                             headerBytes[0] = 26; // VSA type
 
                             var vendorId = BitConverter.GetBytes(_attributeType.VendorId);
                             Array.Reverse(vendorId);
                             Buffer.BlockCopy(vendorId, 0, headerBytes, 2, 4);
-                            headerBytes[6] = (Byte)_attributeType.VendorCode;
-                            headerBytes[7] = (Byte)(2 + contentBytes.Length);  // length of the vsa part
+                            headerBytes[6] = (byte)_attributeType.VendorCode;
+                            headerBytes[7] = (byte)(2 + contentBytes.Length);  // length of the vsa part
                             break;
 
                         case DictionaryAttribute _attributeType:
@@ -333,7 +328,7 @@ namespace Flexinets.Radius.Core
                             throw new InvalidOperationException($"Unknown attribute {attribute.Key}, check spelling or dictionary");
                     }
 
-                    headerBytes[1] = (Byte)(headerBytes.Length + contentBytes.Length);
+                    headerBytes[1] = (byte)(headerBytes.Length + contentBytes.Length);
                     packetBytes.AddRange(headerBytes);
                     packetBytes.AddRange(contentBytes);
                 }
@@ -351,14 +346,14 @@ namespace Flexinets.Radius.Core
             {
                 if (messageAuthenticatorPosition != 0)
                 {
-                    var temp = new Byte[16];
+                    var temp = new byte[16];
                     Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
                     var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, null);
                     Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
                 }
 
                 var authenticator = CalculateRequestAuthenticator(packet.SharedSecret, packetBytesArray);
-                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);               
+                Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
             }
             else if (packet.Code == PacketCode.StatusServer)
             {
@@ -367,17 +362,17 @@ namespace Flexinets.Radius.Core
 
                 if (messageAuthenticatorPosition != 0)
                 {
-                    var temp = new Byte[16];
+                    var temp = new byte[16];
                     Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
                     var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, packet.RequestAuthenticator);
                     Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
-                }              
+                }
             }
             else
             {
                 if (messageAuthenticatorPosition != 0)
                 {
-                    var temp = new Byte[16];
+                    var temp = new byte[16];
                     Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
                     var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, packet.RequestAuthenticator);
                     Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
@@ -396,19 +391,19 @@ namespace Flexinets.Radius.Core
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        private Byte[] GetAttributeValueBytes(Object value)
+        private byte[] GetAttributeValueBytes(object value)
         {
             switch (value)
             {
-                case String _value:
+                case string _value:
                     return Encoding.UTF8.GetBytes(_value);
 
-                case UInt32 _value:
+                case uint _value:
                     var contentBytes = BitConverter.GetBytes(_value);
                     Array.Reverse(contentBytes);
                     return contentBytes;
 
-                case Byte[] _value:
+                case byte[] _value:
                     return _value;
 
                 case IPAddress _value:
