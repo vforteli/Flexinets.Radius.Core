@@ -61,48 +61,31 @@ namespace Flexinets.Radius.Core
             // todo should be async
             using var sr = new StreamReader(dictionaryFileStream);
 
-            while (sr.Peek() >= 0)
+            var lines = sr
+                .ReadToEnd()
+                .Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines.Where(l => l.StartsWith("Attribute")))
             {
-                var line = sr.ReadLine();
-                if (line.StartsWith("Attribute"))
-                {
-                    var lineparts = line.Split(new char[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    var key = Convert.ToByte(lineparts[1]);
+                var lineparts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var key = Convert.ToByte(lineparts[1]);
 
-                    // If duplicates are encountered, the last one will prevail                        
-                    if (Attributes.ContainsKey(key))
-                    {
-                        Attributes.Remove(key);
-                    }
+                var attributeDefinition = new DictionaryAttribute(lineparts[2], key, lineparts[3]);
+                Attributes[key] = attributeDefinition;
+                AttributeNames[attributeDefinition.Name] = attributeDefinition;
+            }
 
-                    if (AttributeNames.ContainsKey(lineparts[2]))
-                    {
-                        AttributeNames.Remove(lineparts[2]);
-                    }
+            foreach (var line in lines.Where(l => l.StartsWith("VendorSpecificAttribute")))
+            {
+                var lineparts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var vsa = new DictionaryVendorAttribute(
+                    Convert.ToUInt32(lineparts[1]),
+                    lineparts[3],
+                    Convert.ToUInt32(lineparts[2]),
+                    lineparts[4]);
 
-                    var attributeDefinition = new DictionaryAttribute(lineparts[2], key, lineparts[3]);
-                    Attributes.Add(key, attributeDefinition);
-                    AttributeNames.Add(attributeDefinition.Name, attributeDefinition);
-                }
-
-                if (line.StartsWith("VendorSpecificAttribute"))
-                {
-                    var lineparts = line.Split(new char[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                    var vsa = new DictionaryVendorAttribute(
-                        Convert.ToUInt32(lineparts[1]),
-                        lineparts[3],
-                        Convert.ToUInt32(lineparts[2]),
-                        lineparts[4]);
-
-                    VendorSpecificAttributes.Add(vsa);
-
-                    if (AttributeNames.ContainsKey(vsa.Name))
-                    {
-                        AttributeNames.Remove(vsa.Name);
-                    }
-
-                    AttributeNames.Add(vsa.Name, vsa);
-                }
+                VendorSpecificAttributes.Add(vsa);
+                AttributeNames[vsa.Name] = vsa;
             }
 
             logger.LogInformation(
