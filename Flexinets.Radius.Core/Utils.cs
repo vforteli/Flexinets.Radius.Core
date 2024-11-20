@@ -11,12 +11,13 @@ namespace Flexinets.Radius.Core
         /// <returns></returns>
         public static byte[] StringToByteArray(string hex)
         {
-            var NumberChars = hex.Length;
-            var bytes = new byte[NumberChars / 2];
-            for (var i = 0; i < NumberChars; i += 2)
+            var numberChars = hex.Length;
+            var bytes = new byte[numberChars / 2];
+            for (var i = 0; i < numberChars; i += 2)
             {
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             }
+
             return bytes;
         }
 
@@ -28,7 +29,7 @@ namespace Flexinets.Radius.Core
         /// <returns></returns>
         public static string ToHexString(this byte[] bytes)
         {
-            return bytes != null ? BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "") : null;
+            return BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "");
         }
 
 
@@ -37,11 +38,12 @@ namespace Flexinets.Radius.Core
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static (LocationType locationType, string mccmnc) GetMccMncFrom3GPPLocationInfo(byte[] bytes)
+        public static (LocationType locationType, string? mccmnc) GetMccMncFrom3GPPLocationInfo(byte[] bytes)
         {
-            string mccmnc = null;
+            string? mccmnc = null;
             var type = (LocationType)bytes[0];
-            if (type == LocationType.CGI || type == LocationType.ECGI || type == LocationType.RAI || type == LocationType.SAI || type == LocationType.TAI || type == LocationType.TAIAndECGI)
+            if (type == LocationType.CGI || type == LocationType.ECGI || type == LocationType.RAI ||
+                type == LocationType.SAI || type == LocationType.TAI || type == LocationType.TAIAndECGI)
             {
                 var mccDigit1 = (bytes[1] & 15).ToString();
                 var mccDigit2 = ((bytes[1] & 240) >> 4).ToString();
