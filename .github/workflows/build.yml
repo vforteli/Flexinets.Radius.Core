@@ -1,0 +1,99 @@
+name: Build
+
+on:
+  push:
+    branches: ["main"]
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test -c Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
+
+      - name: Pack prerelease
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: dotnet pack -c Release --no-build --version-suffix prerelease.${{github.run_number}}
+
+      - name: Pack release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG=${{github.ref_name}}
+          VERSION=${TAG#v}
+          dotnet pack -c Release --no-build -p:PackageVersion=$VERSION
+
+      - name: Upload nuget package
+        if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: nugetpackage
+          path: ./**/*.nupkg
+
+        # todo enable again when project has been modernized...
+        # Prerelease:
+        #   needs: build
+        #   if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        #   runs-on: ubuntu-latest
+
+        #   steps:
+        #     - name: Setup .NET
+        #       uses: actions/setup-dotnet@v4
+        #       with:
+        #         dotnet-version: 8.0.x
+
+        #     - name: Download artifacts
+        #       uses: actions/download-artifact@v4
+
+        #     - name: Push prerelase
+        #       working-directory: ./nugetpackage/TypeScriptHubGenerator/bin/Release/
+        #       run: |
+        #         FILENAME=$(ls *.nupkg | head -n 1)
+        #         dotnet nuget push ./${FILENAME} \
+        #           --source https://api.nuget.org/v3/index.json \
+        #           --api-key ${NUGET_PAT} \
+        #           --skip-duplicate
+
+        #       env:
+        #         NUGET_PAT: ${{ secrets.NUGET_PAT }}
+
+        # Push:
+        #   needs: build
+        #   if: startsWith(github.ref, 'refs/tags/v')
+        #   runs-on: ubuntu-latest
+
+        #   steps:
+        #     - name: Setup .NET
+        #       uses: actions/setup-dotnet@v4
+        #       with:
+        #         dotnet-version: 8.0.x
+
+        #     - name: Download artifacts
+        #       uses: actions/download-artifact@v4
+
+        #     - name: Push production
+        #       working-directory: ./nugetpackage/TypeScriptHubGenerator/bin/Release/
+        #       run: |
+        #         FILENAME=$(ls *.nupkg | head -n 1)
+        #         dotnet nuget push ./${FILENAME} \
+        #           --source https://api.nuget.org/v3/index.json \
+        #           --api-key ${NUGET_PAT} \
+        #           --skip-duplicate
+        #       env:
+        #         NUGET_PAT: ${{ secrets.NUGET_PAT }}

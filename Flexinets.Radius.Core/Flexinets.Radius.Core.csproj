@@ -1,36 +1,46 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net472</TargetFrameworks>
-    <Version>2.0.0</Version>
-    <Title>Flexinets.Radius.Core</Title>
-    <Authors>Verner Fortelius</Authors>
-    <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
-    <Copyright>Copyright 2019 Verner Fortelius</Copyright>
-    <PackageLicenseUrl>https://github.com/vforteli/Flexinets.Radius.Core/blob/master/LICENSE</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
-    <PackageReleaseNotes>Remove dependency on log4net and replace with ILogger.</PackageReleaseNotes>
-    <PackageTags>Radius packet parser assembler</PackageTags>
-    <AssemblyVersion>2.0.0</AssemblyVersion>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>annotations</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Content\radius.dictionary" />
-  </ItemGroup>
+    <PropertyGroup>
+        <Version>3.0.0</Version>
+        <Title>Flexinets.Radius.Core</Title>
+        <Authors>Verner Fortelius</Authors>
+        <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
+        <Copyright>Copyright 2024 Verner Fortelius</Copyright>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageLicense>https://github.com/vforteli/Flexinets.Radius.Core/blob/main/LICENSE</PackageLicense>
+        <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
+        <PackageReleaseNotes>Remove dependency on log4net and replace with ILogger.</PackageReleaseNotes>
+        <PackageTags>Radius packet parser assembler</PackageTags>        
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Content Include="Content\radius.dictionary">
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInPackage>true</IncludeInPackage>
-      <BuildAction>None</BuildAction>
-      <CopyToOutput>true</CopyToOutput>
-    </Content>
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="Content\radius.dictionary"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <Content Include="Content\radius.dictionary">
+            <PackageCopyToOutput>true</PackageCopyToOutput>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <IncludeInPackage>true</IncludeInPackage>
+            <BuildAction>None</BuildAction>
+            <CopyToOutput>true</CopyToOutput>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../README.md" Pack="true" PackagePath="/" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0"/>
+    </ItemGroup>
 
 </Project>
