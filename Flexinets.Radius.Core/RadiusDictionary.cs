@@ -39,7 +39,7 @@ namespace Flexinets.Radius.Core
         }
 
 
-        public DictionaryVendorAttribute GetVendorAttribute(uint vendorId, byte vendorCode)
+        public DictionaryVendorAttribute? GetVendorAttribute(uint vendorId, byte vendorCode)
         {
             return VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vendorId && o.VendorCode == vendorCode);
         }

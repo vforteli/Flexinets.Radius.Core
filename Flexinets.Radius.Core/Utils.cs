@@ -7,8 +7,6 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Convert a string of hex encoded bytes to a byte array
         /// </summary>
-        /// <param name="hex"></param>
-        /// <returns></returns>
         public static byte[] StringToByteArray(string hex)
         {
             var numberChars = hex.Length;
@@ -25,8 +23,6 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Convert a byte array to a string of hex encoded bytes
         /// </summary>
-        /// <param name="bytes"></param>
-        /// <returns></returns>
         public static string ToHexString(this byte[] bytes)
         {
             return BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "");
@@ -36,8 +32,6 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Get the mccmnc as a string from a 3GPP-User-Location-Info vendor attribute.
         /// </summary>
-        /// <param name="bytes"></param>
-        /// <returns></returns>
         public static (LocationType locationType, string? mccmnc) GetMccMncFrom3GPPLocationInfo(byte[] bytes)
         {
             string? mccmnc = null;
