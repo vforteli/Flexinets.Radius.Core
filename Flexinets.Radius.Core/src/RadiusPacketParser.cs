@@ -147,7 +147,7 @@ namespace Flexinets.Radius.Core
         /// Tries to get a packet from the stream. Returns true if successful
         /// Returns false if no packet could be parsed or stream is empty ie closing
         /// </summary>
-        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, byte[] sharedSecret)
+        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket? packet, byte[] sharedSecret)
         {
             var packetHeaderBytes = new byte[4];
             var i = stream.Read(packetHeaderBytes, 0, 4);
@@ -208,7 +208,7 @@ namespace Flexinets.Radius.Core
                     return new IPAddress(contentBytes);
 
                 default:
-                    return null;
+                    throw new ArgumentException("Unknown type");
             }
         }
 
@@ -304,7 +304,9 @@ namespace Flexinets.Radius.Core
                             // Encrypt password if this is a User-Password attribute
                             if (_attributeType.Code == 2)
                             {
-                                contentBytes = RadiusPassword.Encrypt(packet.SharedSecret, packet.Authenticator,
+                                contentBytes = RadiusPassword.Encrypt(
+                                    packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"),
+                                    packet.Authenticator,
                                     contentBytes);
                             }
                             else if
@@ -343,18 +345,22 @@ namespace Flexinets.Radius.Core
                     var temp = new byte[16];
                     Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
                     var messageAuthenticatorBytes =
-                        CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret, null);
+                        CalculateMessageAuthenticator(packetBytesArray,
+                            packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"), null);
                     Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2,
                         16);
                 }
 
-                var authenticator = CalculateRequestAuthenticator(packet.SharedSecret, packetBytesArray);
+                var authenticator = CalculateRequestAuthenticator(
+                    packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"), packetBytesArray);
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
             }
             else if (packet.Code == PacketCode.StatusServer)
             {
                 var authenticator = packet.RequestAuthenticator != null
-                    ? CalculateResponseAuthenticator(packet.SharedSecret, packet.RequestAuthenticator, packetBytesArray)
+                    ? CalculateResponseAuthenticator(
+                        packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"),
+                        packet.RequestAuthenticator, packetBytesArray)
                     : packet.Authenticator;
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
 
@@ -362,7 +368,8 @@ namespace Flexinets.Radius.Core
                 {
                     var temp = new byte[16];
                     Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
-                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret,
+                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray,
+                        packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"),
                         packet.RequestAuthenticator);
                     Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2,
                         16);
@@ -374,14 +381,17 @@ namespace Flexinets.Radius.Core
                 {
                     var temp = new byte[16];
                     Buffer.BlockCopy(temp, 0, packetBytesArray, messageAuthenticatorPosition + 2, 16);
-                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray, packet.SharedSecret,
+                    var messageAuthenticatorBytes = CalculateMessageAuthenticator(packetBytesArray,
+                        packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"),
                         packet.RequestAuthenticator);
                     Buffer.BlockCopy(messageAuthenticatorBytes, 0, packetBytesArray, messageAuthenticatorPosition + 2,
                         16);
                 }
 
                 var authenticator = packet.RequestAuthenticator != null
-                    ? CalculateResponseAuthenticator(packet.SharedSecret, packet.RequestAuthenticator, packetBytesArray)
+                    ? CalculateResponseAuthenticator(
+                        packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"),
+                        packet.RequestAuthenticator, packetBytesArray)
                     : packet.Authenticator;
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
             }

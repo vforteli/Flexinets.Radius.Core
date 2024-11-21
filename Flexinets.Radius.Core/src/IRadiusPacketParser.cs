@@ -6,6 +6,6 @@ namespace Flexinets.Radius.Core
     {
         byte[] GetBytes(IRadiusPacket packet);
         IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret);
-        bool TryParsePacketFromStream(Stream stream, out IRadiusPacket packet, byte[] sharedSecret);
+        bool TryParsePacketFromStream(Stream stream, out IRadiusPacket? packet, byte[] sharedSecret);
     }
 }

@@ -82,7 +82,8 @@ namespace Flexinets.Radius.Core
                 return (T)attribute.Single();
             }
 
-            return default;
+            // todo fix this...
+            return default!;
         }
 
 
