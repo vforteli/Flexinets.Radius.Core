@@ -28,6 +28,7 @@ namespace Flexinets.Radius.Core
             ParseDictionary(dictionaryFileStream, logger);
         }
 
+
         /// <summary>
         /// Load the dictionary from a dictionary file
         /// </summary>        
@@ -60,10 +61,14 @@ namespace Flexinets.Radius.Core
         {
             // todo should be async
             using var sr = new StreamReader(dictionaryFileStream);
+            var content = sr.ReadToEnd();
+            ParseDictionary(content, logger);
+        }
 
-            var lines = sr
-                .ReadToEnd()
-                .Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+        private void ParseDictionary(string dictionaryFileContent, ILogger<RadiusDictionary> logger)
+        {
+            var lines = dictionaryFileContent.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var line in lines.Where(l => l.StartsWith("Attribute")))
             {
