@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Flexinets.Radius.Core", "Fl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flexinets.Radius.Core.Tests", "Flexinets.Radius.Core.Tests\Flexinets.Radius.Core.Tests.csproj", "{3091C312-37D1-448D-A4BE-5E4786ADCC16}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flexinets.Radius.RadiusServer", "RadiusTestServer\Flexinets.Radius.RadiusServer.csproj", "{DCE0CB2B-0C08-429E-8830-F37F6922E210}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3091C312-37D1-448D-A4BE-5E4786ADCC16}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3091C312-37D1-448D-A4BE-5E4786ADCC16}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3091C312-37D1-448D-A4BE-5E4786ADCC16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCE0CB2B-0C08-429E-8830-F37F6922E210}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCE0CB2B-0C08-429E-8830-F37F6922E210}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCE0CB2B-0C08-429E-8830-F37F6922E210}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCE0CB2B-0C08-429E-8830-F37F6922E210}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

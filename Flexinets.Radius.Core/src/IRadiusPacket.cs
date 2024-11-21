@@ -5,26 +5,11 @@ namespace Flexinets.Radius.Core
 {
     public interface IRadiusPacket
     {
-        byte Identifier
-        {
-            get;
-        }
-        byte[] Authenticator
-        {
-            get;
-        }
-        byte[] SharedSecret
-        {
-            get;
-        }
-        PacketCode Code
-        {
-            get;
-        }
-        byte[] RequestAuthenticator
-        {
-            get;
-        }
+        byte Identifier { get; }
+        byte[] Authenticator { get; }
+        byte[]? SharedSecret { get; }
+        PacketCode Code { get; }
+        byte[]? RequestAuthenticator { get; }
         IRadiusPacket CreateResponsePacket(PacketCode responseCode);
 
         T GetAttribute<T>(string name);
@@ -36,9 +21,6 @@ namespace Flexinets.Radius.Core
         void AddAttribute(string name, IPAddress value);
         void AddAttribute(string name, byte[] value);
 
-        IDictionary<string, List<object>> Attributes
-        {
-            get;
-        }
+        IDictionary<string, List<object>> Attributes { get; }
     }
 }

@@ -4,11 +4,12 @@ namespace Flexinets.Radius.Core
 {
     public class VendorSpecificAttribute
     {
-        public byte Length;
-        public uint VendorId;
-        public byte VendorCode;
-        public Type VendorType;
-        public byte[] Value;
+        public readonly byte Length;
+        public readonly uint VendorId;
+        public readonly byte VendorCode;
+        // todo not sure if this is useful for anything
+        // public readonly Type VendorType; 
+        public readonly byte[] Value;
 
 
         /// <summary>

@@ -15,8 +15,8 @@ namespace Flexinets.Radius.Core
         public byte Identifier { get; internal set; }
         public byte[] Authenticator { get; internal set; } = new byte[16];
         public IDictionary<string, List<object>> Attributes { get; set; } = new Dictionary<string, List<object>>();
-        public byte[] SharedSecret { get; internal set; }
-        public byte[] RequestAuthenticator { get; internal set; }
+        public byte[]? SharedSecret { get; internal set; }
+        public byte[]? RequestAuthenticator { get; internal set; }
 
 
         internal RadiusPacket()
@@ -77,12 +77,13 @@ namespace Flexinets.Radius.Core
         /// <returns></returns>
         public T GetAttribute<T>(string name)
         {
-            if (Attributes.ContainsKey(name))
+            if (Attributes.TryGetValue(name, out var attribute))
             {
-                return (T)Attributes[name].Single();
+                return (T)attribute.Single();
             }
 
-            return default;
+            // todo fix this...
+            return default!;
         }
 
 
@@ -92,15 +93,10 @@ namespace Flexinets.Radius.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="name"></param>
         /// <returns></returns>
-        public List<T> GetAttributes<T>(string name)
-        {
-            if (Attributes.ContainsKey(name))
-            {
-                return Attributes[name].Cast<T>().ToList();
-            }
-
-            return new List<T>();
-        }
+        public List<T> GetAttributes<T>(string name) =>
+            Attributes.TryGetValue(name, out var attribute)
+                ? attribute.Cast<T>().ToList()
+                : new List<T>();
 
 
         public void AddAttribute(string name, string value)
