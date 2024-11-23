@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,22 +13,25 @@ namespace Flexinets.Radius.Core
     {
         private readonly ILogger _logger;
         private readonly IRadiusDictionary _radiusDictionary;
+        private readonly bool _skipBlastRadiusChecks;
 
 
         /// <summary>
         /// RadiusPacketParser
         /// </summary>
-        public RadiusPacketParser(ILogger<RadiusPacketParser> logger, IRadiusDictionary radiusDictionary)
+        public RadiusPacketParser(ILogger<RadiusPacketParser> logger, IRadiusDictionary radiusDictionary,
+            bool skipBlastRadiusChecks = false)
         {
             _logger = logger;
             _radiusDictionary = radiusDictionary;
+            _skipBlastRadiusChecks = skipBlastRadiusChecks;
         }
 
 
         /// <summary>
         /// Parses packet bytes and returns an IRadiusPacket
         /// </summary>
-        public IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret)
+        public IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret, byte[]? requestAuthenticator = null)
         {
             var packetLength = BitConverter.ToUInt16(packetBytes.Skip(2).Take(2).Reverse().ToArray(), 0);
             if (packetBytes.Length < packetLength)
@@ -125,6 +128,23 @@ namespace Flexinets.Radius.Core
                 position += length;
             }
 
+            // check blast radius for all Access* packets
+            if (packet.Code == PacketCode.AccessAccept || packet.Code == PacketCode.AccessChallenge ||
+                packet.Code == PacketCode.AccessReject || packet.Code == PacketCode.AccessRequest)
+            {
+                if (messageAuthenticatorPosition == 0 &&
+                    !_skipBlastRadiusChecks)
+                {
+                    throw new MessageAuthenticatorException("No message authenticator found in packet");
+                }
+
+                if (messageAuthenticatorPosition != 20 &&
+                    !_skipBlastRadiusChecks)
+                {
+                    _logger.LogWarning("Message authenticator expected to be first attribute");
+                }
+            }
+
             if (messageAuthenticatorPosition != 0)
             {
                 var messageAuthenticator = packet.GetAttribute<byte[]>("Message-Authenticator");
@@ -132,7 +152,8 @@ namespace Flexinets.Radius.Core
                 var tempPacket = new byte[packetLength];
                 Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);
                 Buffer.BlockCopy(temp, 0, tempPacket, messageAuthenticatorPosition + 2, 16);
-                var calculatedMessageAuthenticator = CalculateMessageAuthenticator(tempPacket, sharedSecret, null);
+                var calculatedMessageAuthenticator =
+                    CalculateMessageAuthenticator(tempPacket, sharedSecret, requestAuthenticator);
                 if (!calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator))
                 {
                     throw new InvalidOperationException($"Invalid Message-Authenticator in packet {packet.Identifier}");
@@ -147,7 +168,8 @@ namespace Flexinets.Radius.Core
         /// Tries to get a packet from the stream. Returns true if successful
         /// Returns false if no packet could be parsed or stream is empty ie closing
         /// </summary>
-        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket? packet, byte[] sharedSecret)
+        public bool TryParsePacketFromStream(Stream stream, out IRadiusPacket? packet, byte[] sharedSecret,
+            byte[]? requestAuthenticator = null)
         {
             var packetHeaderBytes = new byte[4];
             var i = stream.Read(packetHeaderBytes, 0, 4);
@@ -161,7 +183,8 @@ namespace Flexinets.Radius.Core
                         packetContentBytes
                             .Length); // todo stream.read should use loop in case everything is not available immediately
 
-                    packet = Parse(packetHeaderBytes.Concat(packetContentBytes).ToArray(), sharedSecret);
+                    packet = Parse(packetHeaderBytes.Concat(packetContentBytes).ToArray(), sharedSecret,
+                        requestAuthenticator);
                     return true;
                 }
                 catch (Exception ex)
@@ -355,7 +378,7 @@ namespace Flexinets.Radius.Core
                     packet.SharedSecret ?? throw new ArgumentNullException("Secret was null?"), packetBytesArray);
                 Buffer.BlockCopy(authenticator, 0, packetBytesArray, 4, 16);
             }
-            else if (packet.Code == PacketCode.StatusServer)
+            else if (packet.Code == PacketCode.StatusServer || packet.Code == PacketCode.AccessRequest)
             {
                 var authenticator = packet.RequestAuthenticator != null
                     ? CalculateResponseAuthenticator(

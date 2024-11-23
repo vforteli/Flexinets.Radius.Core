@@ -16,7 +16,7 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageLicense>https://github.com/vforteli/Flexinets.Radius.Core/blob/main/LICENSE</PackageLicense>
         <PackageProjectUrl>https://github.com/vforteli/Flexinets.Radius.Core</PackageProjectUrl>
-        <PackageReleaseNotes>Remove dependency on log4net and replace with ILogger.</PackageReleaseNotes>
+        <PackageReleaseNotes>Message authenticator handling for blastradius</PackageReleaseNotes>
         <PackageTags>Radius packet parser assembler</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
