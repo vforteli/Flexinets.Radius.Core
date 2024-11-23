@@ -11,33 +11,31 @@ public class TestPacketHandler : IPacketHandler
     {
         if (packet.Code == PacketCode.AccountingRequest)
         {
-            var acctStatusType = packet.GetAttribute<AcctStatusType>("Acct-Status-Type");
-            if (acctStatusType == AcctStatusType.Start)
+            return packet.GetAttribute<AcctStatusType>("Acct-Status-Type") switch
             {
-                return packet.CreateResponsePacket(PacketCode.AccountingResponse);
-            }
-
-            if (acctStatusType == AcctStatusType.Stop)
-            {
-                return packet.CreateResponsePacket(PacketCode.AccountingResponse);
-            }
-
-            if (acctStatusType == AcctStatusType.InterimUpdate)
-            {
-                return packet.CreateResponsePacket(PacketCode.AccountingResponse);
-            }
+                AcctStatusType.Start => packet.CreateResponsePacket(PacketCode.AccountingResponse),
+                AcctStatusType.Stop => packet.CreateResponsePacket(PacketCode.AccountingResponse),
+                AcctStatusType.InterimUpdate => packet.CreateResponsePacket(PacketCode.AccountingResponse),
+                _ => throw new InvalidOperationException("Couldnt handle request?!"),
+            };
         }
-        else if (packet.Code == PacketCode.AccessRequest)
+
+        if (packet.Code == PacketCode.AccessRequest)
         {
-            if (packet.GetAttribute<string>("User-Name") == "user@example.com" &&
-                packet.GetAttribute<string>("User-Password") == "1234")
+            var username = packet.GetAttribute<string>("User-Name");
+            var password = packet.GetAttribute<string>("User-Password");
+
+            if (username == "user@example.com" && password == "1234")
             {
                 var response = packet.CreateResponsePacket(PacketCode.AccessAccept);
+                response.AddAttribute("Message-Authenticator", new byte[16]);
                 response.AddAttribute("Acct-Interim-Interval", 60);
                 return response;
             }
 
-            return packet.CreateResponsePacket(PacketCode.AccessReject);
+            var rejectPacket = packet.CreateResponsePacket(PacketCode.AccessReject);
+            rejectPacket.AddAttribute("Message-Authenticator", new byte[16]);
+            return rejectPacket;
         }
 
         throw new InvalidOperationException("Couldnt handle request?!");
