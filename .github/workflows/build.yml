@@ -47,31 +47,30 @@ jobs:
           path: ./**/*.nupkg
 
         # todo enable again when project has been modernized...
-        # Prerelease:
-        #   needs: build
-        #   if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        #   runs-on: ubuntu-latest
+  prerelease:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
 
-        #   steps:
-        #     - name: Setup .NET
-        #       uses: actions/setup-dotnet@v4
-        #       with:
-        #         dotnet-version: 8.0.x
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-        #     - name: Download artifacts
-        #       uses: actions/download-artifact@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
 
-        #     - name: Push prerelase
-        #       working-directory: ./nugetpackage/TypeScriptHubGenerator/bin/Release/
-        #       run: |
-        #         FILENAME=$(ls *.nupkg | head -n 1)
-        #         dotnet nuget push ./${FILENAME} \
-        #           --source https://api.nuget.org/v3/index.json \
-        #           --api-key ${NUGET_PAT} \
-        #           --skip-duplicate
-
-        #       env:
-        #         NUGET_PAT: ${{ secrets.NUGET_PAT }}
+      - name: Push prerelase
+        working-directory: ./nugetpackage/Flexinets.Radius.Core/bin/Release/
+        env:
+          NUGET_PAT: ${{ secrets.NUGET_PAT }}
+        run: |
+          FILENAME=$(ls *.nupkg | head -n 1)
+          dotnet nuget push ./${FILENAME} \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key ${NUGET_PAT} \
+            --skip-duplicate
 
         # Push:
         #   needs: build
