@@ -21,6 +21,12 @@ namespace Flexinets.Radius.Core
         void AddAttribute(string name, IPAddress value);
         void AddAttribute(string name, byte[] value);
 
+        /// <summary>
+        /// Add a Message-Authenticator placeholder attribute to the packet
+        /// The actual value is calculated when assembling the packet
+        /// </summary>
+        void AddMessageAuthenticator();
+
         IDictionary<string, List<object>> Attributes { get; }
     }
 }

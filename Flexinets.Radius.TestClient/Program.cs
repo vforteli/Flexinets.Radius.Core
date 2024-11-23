@@ -16,13 +16,13 @@ var logger = loggerFactory.CreateLogger("Flexinets.Radius.TestClient");
 
 var dictionaryStream = new MemoryStream(Encoding.UTF8.GetBytes(TestDictionary.RadiusDictionary));
 var dictionary = new RadiusDictionary(dictionaryStream, loggerFactory.CreateLogger<RadiusDictionary>());
-var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, dictionary);
+var radiusPacketParser = new RadiusPacketParser(loggerFactory.CreateLogger<RadiusPacketParser>(), dictionary);
 
 using var client = new RadiusClient(new IPEndPoint(IPAddress.Any, 58733), radiusPacketParser);
 
 
 var packet = new RadiusPacket(PacketCode.AccessRequest, 0, "xyzzy5461");
-packet.AddAttribute("Message-Authenticator", new byte[16]);
+packet.AddMessageAuthenticator();
 packet.AddAttribute("User-Name", "nemo");
 packet.AddAttribute("User-Password", "arctangent");
 

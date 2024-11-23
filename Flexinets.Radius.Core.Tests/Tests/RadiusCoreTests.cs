@@ -442,7 +442,7 @@ public class RadiusCoreTests
         };
 
         response.AddAttribute("EAP-Message", Utils.StringToByteArray("04670004"));
-        response.AddAttribute("Message-Authenticator", new byte[16]);
+        response.AddMessageAuthenticator();
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
         Assert.That(radiusPacketParser.GetBytes(response).ToHexString(), Is.EqualTo(expected));
