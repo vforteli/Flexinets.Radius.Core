@@ -47,5 +47,6 @@ public class TestPacketHandler : IPacketHandler
     /// </summary>
     public void Dispose()
     {
+        GC.SuppressFinalize(this);
     }
 }

@@ -37,8 +37,7 @@ public class RadiusClient : IDisposable
     /// <summary>
     /// Send a packet with specified timeout
     /// </summary>
-    public async Task<IRadiusPacket> SendPacketAsync(IRadiusPacket packet, IPEndPoint remoteEndpoint,
-        TimeSpan timeout)
+    public async Task<IRadiusPacket> SendPacketAsync(IRadiusPacket packet, IPEndPoint remoteEndpoint, TimeSpan timeout)
     {
         var packetBytes = _radiusPacketParser.GetBytes(packet);
         var responseTaskCS = new TaskCompletionSource<UdpReceiveResult>();
@@ -91,8 +90,12 @@ public class RadiusClient : IDisposable
     }
 
 
+    /// <summary>
+    /// Dispose
+    /// </summary>
     public void Dispose()
     {
-        _udpClient?.Dispose();
+        GC.SuppressFinalize(this);
+        _udpClient.Dispose();
     }
 }

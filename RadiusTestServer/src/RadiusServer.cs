@@ -23,7 +23,7 @@ public class RadiusServer(
 {
     private IUdpClient? _server;
 
-    public Boolean Running { get; private set; }
+    public bool Running { get; private set; }
 
 
     /// <summary>
@@ -35,7 +35,7 @@ public class RadiusServer(
         {
             _server = udpClientFactory.CreateClient(localEndpoint);
             Running = true;
-            logger.LogInformation($"Starting Radius server on {localEndpoint}");
+            logger.LogInformation("Starting Radius server on {localEndpoint}", localEndpoint);
             _ = StartReceiveLoopAsync();
             logger.LogInformation("Server started");
         }
@@ -101,7 +101,7 @@ public class RadiusServer(
     {
         try
         {
-            logger.LogDebug($"Received packet from {remoteEndpoint}");
+            logger.LogDebug("Received packet from {remoteEndpoint}", remoteEndpoint);
 
             if (packetHandlerRepository.TryGetHandler(remoteEndpoint.Address, out var handler))
             {
@@ -114,19 +114,24 @@ public class RadiusServer(
             }
             else
             {
-                logger.LogError($"No packet handler found for remote ip {remoteEndpoint}");
-                var packet = radiusPacketParser.Parse(packetBytes, Encoding.UTF8.GetBytes("wut"));
-                DumpPacket(packet);
+                logger.LogError("No packet handler found for remote ip {remoteEndpoint}", remoteEndpoint);
+
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    // no handler found, but dump the raw packet with some secret
+                    logger.LogDebug(
+                        Utils.GetPacketString(radiusPacketParser.Parse(packetBytes, Encoding.UTF8.GetBytes("wut"))));
+                }
             }
         }
-        catch (Exception ex) when (ex is ArgumentException || ex is OverflowException)
+        catch (Exception ex) when (ex is ArgumentException or OverflowException)
         {
-            logger.LogWarning($"Ignoring malformed(?) packet received from {remoteEndpoint}", ex);
+            logger.LogWarning(ex, "Ignoring malformed(?) packet received from {remoteEndpoint}", remoteEndpoint);
             logger.LogDebug(packetBytes.ToHexString());
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, $"Failed to receive packet from {remoteEndpoint}");
+            logger.LogError(ex, "Failed to receive packet from {remoteEndpoint}", remoteEndpoint);
             logger.LogDebug(packetBytes.ToHexString());
         }
     }
@@ -135,22 +140,21 @@ public class RadiusServer(
     /// <summary>
     /// Parses a packet and gets a response packet from the handler
     /// </summary>
-    internal IRadiusPacket? GetResponsePacket(
+    internal IRadiusPacket GetResponsePacket(
         IPacketHandler packetHandler,
         string sharedSecret,
         byte[] packetBytes,
         IPEndPoint remoteEndpoint)
     {
         var requestPacket = radiusPacketParser.Parse(packetBytes, Encoding.UTF8.GetBytes(sharedSecret));
-        logger.LogInformation("Received {code} from {endpoint} Id={identifier}", requestPacket.Code, remoteEndpoint,
-            requestPacket.Identifier);
+        logger.LogInformation("Received {code} from {endpoint} Id={identifier}",
+            requestPacket.Code, remoteEndpoint, requestPacket.Identifier);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-            DumpPacket(requestPacket);
+            logger.LogDebug(Utils.GetPacketString(requestPacket));
+            logger.LogDebug(packetBytes.ToHexString());
         }
-
-        logger.LogDebug(packetBytes.ToHexString());
 
         // Handle status server requests in server outside packet handler
         if (requestPacket.Code == PacketCode.StatusServer)
@@ -159,17 +163,21 @@ public class RadiusServer(
                 ? PacketCode.AccessAccept
                 : PacketCode.AccountingResponse;
 
-            logger.LogDebug($"Sending {responseCode} for StatusServer request from {remoteEndpoint}");
+            logger.LogDebug("Sending {responseCode} for StatusServer request from {remoteEndpoint}",
+                responseCode, remoteEndpoint);
+
             return requestPacket.CreateResponsePacket(responseCode);
         }
 
-        logger.LogDebug($"Handling packet for remote ip {remoteEndpoint.Address} with {packetHandler.GetType()}");
+        logger.LogDebug("Handling packet for remote ip {remoteEndpoint.Address} with {packetHandler.GetType()}",
+            remoteEndpoint.Address, packetHandler.GetType());
 
         var sw = Stopwatch.StartNew();
         var responsePacket = packetHandler.HandlePacket(requestPacket);
 
         logger.LogDebug(
-            $"{remoteEndpoint} Id={responsePacket.Identifier}, Received {responsePacket.Code} from handler in {sw.ElapsedMilliseconds}ms");
+            "{remoteEndpoint} Id={responsePacket.Identifier}, Received {response.PacketCode} from handler in {sw.ElapsedMilliseconds}ms",
+            remoteEndpoint, responsePacket.Identifier, responsePacket.Code, sw.ElapsedMilliseconds);
 
         if (requestPacket.Attributes.ContainsKey("Proxy-State"))
         {
@@ -188,7 +196,8 @@ public class RadiusServer(
     {
         var responseBytes = radiusPacketParser.GetBytes(responsePacket);
         _server?.Send(responseBytes, responseBytes.Length, remoteEndpoint);
-        logger.LogInformation($"{responsePacket.Code} sent to {remoteEndpoint} Id={responsePacket.Identifier}");
+        logger.LogInformation("{responsePacket.Code} sent to {remoteEndpoint} Id={responsePacket.Identifier}",
+            responsePacket.Code, remoteEndpoint, responsePacket.Identifier);
     }
 
 
@@ -197,29 +206,7 @@ public class RadiusServer(
     /// </summary>
     public void Dispose()
     {
+        GC.SuppressFinalize(this);
         _server?.Dispose();
-    }
-
-
-    /// <summary>
-    /// Dump the packet attributes to the log
-    /// </summary>
-    private void DumpPacket(IRadiusPacket packet)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"Packet dump for {packet.Identifier}:");
-        foreach (var attribute in packet.Attributes)
-        {
-            if (attribute.Key == "User-Password")
-            {
-                sb.AppendLine($"{attribute.Key} length : {attribute.Value.First().ToString()?.Length}");
-            }
-            else
-            {
-                attribute.Value.ForEach(o => sb.AppendLine($"{attribute.Key} : {o} [{o.GetType()}]"));
-            }
-        }
-
-        logger.LogDebug(sb.ToString());
     }
 }

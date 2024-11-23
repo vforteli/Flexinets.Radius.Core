@@ -20,81 +20,81 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
-        /// Load the dictionary from a stream
-        /// </summary>        
-        public RadiusDictionary(Stream dictionaryFileStream, ILogger<RadiusDictionary> logger)
+        /// Parse dictionary from string content in Radiator format
+        /// </summary>
+        public static IRadiusDictionary Parse(string dictionaryFileContent)
         {
-            // todo shouldnt be doing stuff like this in a constructor...
-            ParseDictionary(dictionaryFileStream, logger);
-        }
-
-
-        /// <summary>
-        /// Load the dictionary from a dictionary file
-        /// </summary>        
-        public RadiusDictionary(string dictionaryFilePath, ILogger<RadiusDictionary> logger)
-        {
-            // todo shouldnt be doing stuff like this in a constructor...
-            using var stream = File.OpenRead(dictionaryFilePath);
-            ParseDictionary(stream, logger);
-        }
-
-
-        public DictionaryVendorAttribute? GetVendorAttribute(uint vendorId, byte vendorCode)
-        {
-            return VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vendorId && o.VendorCode == vendorCode);
-        }
-
-        public DictionaryAttribute GetAttribute(byte typecode)
-        {
-            return Attributes[typecode];
-        }
-
-        public DictionaryAttribute GetAttribute(string name)
-        {
-            AttributeNames.TryGetValue(name, out var attributeType);
-            return attributeType;
-        }
-
-
-        private void ParseDictionary(Stream dictionaryFileStream, ILogger<RadiusDictionary> logger)
-        {
-            // todo should be async
-            using var sr = new StreamReader(dictionaryFileStream);
-            var content = sr.ReadToEnd();
-            ParseDictionary(content, logger);
-        }
-
-
-        private void ParseDictionary(string dictionaryFileContent, ILogger<RadiusDictionary> logger)
-        {
-            var lines = dictionaryFileContent.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            var radiusDictionary = new RadiusDictionary();
+            var lines = dictionaryFileContent
+                .Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(l => l.Trim())
+                .ToList();
 
             foreach (var line in lines.Where(l => l.StartsWith("Attribute")))
             {
-                var lineparts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                var key = Convert.ToByte(lineparts[1]);
+                var lineParts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var attributeCode = Convert.ToByte(lineParts[1]);
 
-                var attributeDefinition = new DictionaryAttribute(lineparts[2], key, lineparts[3]);
-                Attributes[key] = attributeDefinition;
-                AttributeNames[attributeDefinition.Name] = attributeDefinition;
+                var attributeDefinition = new DictionaryAttribute(lineParts[2], attributeCode, lineParts[3]);
+                radiusDictionary.Attributes[attributeCode] = attributeDefinition;
+                radiusDictionary.AttributeNames[attributeDefinition.Name] = attributeDefinition;
             }
 
             foreach (var line in lines.Where(l => l.StartsWith("VendorSpecificAttribute")))
             {
-                var lineparts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var lineParts = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 var vsa = new DictionaryVendorAttribute(
-                    Convert.ToUInt32(lineparts[1]),
-                    lineparts[3],
-                    Convert.ToUInt32(lineparts[2]),
-                    lineparts[4]);
+                    Convert.ToUInt32(lineParts[1]),
+                    lineParts[3],
+                    Convert.ToUInt32(lineParts[2]),
+                    lineParts[4]);
 
-                VendorSpecificAttributes.Add(vsa);
-                AttributeNames[vsa.Name] = vsa;
+                radiusDictionary.VendorSpecificAttributes.Add(vsa);
+                radiusDictionary.AttributeNames[vsa.Name] = vsa;
             }
 
-            logger.LogInformation(
-                $"Parsed {Attributes.Count} attributes and {VendorSpecificAttributes.Count} vendor attributes from file");
+            return radiusDictionary;
         }
+
+
+        /// <summary>
+        /// Read and parse dictionary from file in Radiator format
+        /// </summary>
+        public static async Task<IRadiusDictionary> LoadAsync(string dictionaryFilePath) =>
+            Parse(await File.ReadAllTextAsync(dictionaryFilePath));
+
+
+        /// <summary>
+        /// Load the dictionary from a dictionary file
+        /// </summary>
+        [Obsolete("Use RadiusDictionary.LoadAsync instead")]
+        public RadiusDictionary(string dictionaryFilePath, ILogger<RadiusDictionary> logger)
+        {
+            // todo shouldnt be doing stuff like this in a constructor...
+            var dictionary = (RadiusDictionary)Parse(File.ReadAllText(dictionaryFilePath));
+
+            Attributes = dictionary.Attributes;
+            VendorSpecificAttributes = dictionary.VendorSpecificAttributes;
+            AttributeNames = dictionary.AttributeNames;
+
+            logger.LogInformation(
+                "Parsed {Attributes.Count} attributes and {VendorSpecificAttributes.Count} vendor attributes from file",
+                Attributes.Count, VendorSpecificAttributes.Count);
+        }
+
+
+        private RadiusDictionary()
+        {
+        }
+
+
+        public DictionaryVendorAttribute? GetVendorAttribute(uint vendorId, byte vendorCode) =>
+            VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vendorId && o.VendorCode == vendorCode);
+
+
+        public DictionaryAttribute? GetAttribute(byte typecode) => Attributes.GetValueOrDefault(typecode);
+
+
+        public DictionaryAttribute? GetAttribute(string name) => AttributeNames.GetValueOrDefault(name);
     }
 }

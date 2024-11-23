@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text;
 using Flexinets.Net;
 using Flexinets.Radius;
 using Flexinets.Radius.Core;
@@ -11,8 +10,7 @@ var loggerFactory = LoggerFactory.Create(o =>
     o.SetMinimumLevel(LogLevel.Trace);
 });
 
-var dictionaryStream = new MemoryStream(Encoding.UTF8.GetBytes(TestDictionary.RadiusDictionary));
-var dictionary = new RadiusDictionary(dictionaryStream, loggerFactory.CreateLogger<RadiusDictionary>());
+var dictionary = RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary);
 var handlerRepository = new PacketHandlerRepository();
 handlerRepository.AddPacketHandler(IPAddress.Any, new TestPacketHandler(), "somesecret");
 

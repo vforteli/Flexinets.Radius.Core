@@ -51,32 +51,21 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Creates a response packet with code, authenticator, identifier and secret from the request packet.
         /// </summary>
-        public IRadiusPacket CreateResponsePacket(PacketCode responseCode)
-        {
-            return new RadiusPacket
+        public IRadiusPacket CreateResponsePacket(PacketCode responseCode) =>
+            new RadiusPacket
             {
                 Code = responseCode,
                 SharedSecret = SharedSecret,
                 Identifier = Identifier,
                 RequestAuthenticator = Authenticator
             };
-        }
 
 
         /// <summary>
         /// Gets a single attribute value with name cast to type
         /// Throws an exception if multiple attributes with the same name are found
         /// </summary>
-        public T GetAttribute<T>(string name)
-        {
-            if (Attributes.TryGetValue(name, out var attribute))
-            {
-                return (T)attribute.Single();
-            }
-
-            // todo fix this...
-            return default!;
-        }
+        public T GetAttribute<T>(string name) => GetAttributes<T>(name).SingleOrDefault();
 
 
         /// <summary>

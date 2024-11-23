@@ -11,12 +11,7 @@ namespace Flexinets.Radius.Core.Tests;
 [TestFixture]
 public class RadiusCoreTests
 {
-    private RadiusDictionary GetDictionary()
-    {
-        var dictionaryStream = new MemoryStream(Encoding.UTF8.GetBytes(TestDictionary.RadiusDictionary));
-        var dictionary = new RadiusDictionary(dictionaryStream, NullLogger<RadiusDictionary>.Instance);
-        return dictionary;
-    }
+    private IRadiusDictionary GetDictionary() => RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary);
 
 
     /// <summary>
@@ -170,7 +165,8 @@ public class RadiusCoreTests
         var secret = "xyzzy5461";
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
-        var requestAuthenticator = radiusPacketParser.CalculateRequestAuthenticator(Encoding.UTF8.GetBytes(secret),
+        var requestAuthenticator = Utils.CalculateRequestAuthenticator(
+            Encoding.UTF8.GetBytes(secret),
             Utils.StringToByteArray(packetBytes));
         var packet = radiusPacketParser.Parse(Utils.StringToByteArray(packetBytes), Encoding.UTF8.GetBytes(secret));
 
@@ -189,7 +185,8 @@ public class RadiusCoreTests
         var secret = "foo";
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
-        var requestAuthenticator = radiusPacketParser.CalculateRequestAuthenticator(Encoding.UTF8.GetBytes(secret),
+        var requestAuthenticator = Utils.CalculateRequestAuthenticator(
+            Encoding.UTF8.GetBytes(secret),
             Utils.StringToByteArray(packetBytes));
         Assert.That(
             () => radiusPacketParser.Parse(Utils.StringToByteArray(packetBytes), Encoding.UTF8.GetBytes(secret)),
@@ -229,7 +226,7 @@ public class RadiusCoreTests
         var stream = new MemoryStream(Utils.StringToByteArray(request));
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
         var result = radiusPacketParser.TryParsePacketFromStream(stream, out var packet, secret);
-        var bytes = radiusPacketParser.GetBytes(packet);
+        var bytes = radiusPacketParser.GetBytes(packet!);
 
         Assert.That(bytes.ToHexString(), Is.EqualTo(expected));
     }
@@ -248,7 +245,7 @@ public class RadiusCoreTests
         var stream = new MemoryStream(Utils.StringToByteArray(request));
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
         var result = radiusPacketParser.TryParsePacketFromStream(stream, out var packet, secret);
-        var bytes = radiusPacketParser.GetBytes(packet);
+        var bytes = radiusPacketParser.GetBytes(packet!);
 
         Assert.That(bytes.ToHexString(), Is.EqualTo(expected));
     }
@@ -367,7 +364,7 @@ public class RadiusCoreTests
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
         Assert.That(() => radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret)),
-            Throws.TypeOf<InvalidOperationException>());
+            Throws.TypeOf<MessageAuthenticatorException>());
     }
 
 
