@@ -27,9 +27,6 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Create a new packet with a random authenticator
         /// </summary>
-        /// <param name="code"></param>
-        /// <param name="identifier"></param>
-        /// <param name="secret"></param>
         public RadiusPacket(PacketCode code, byte identifier, string secret)
         {
             Code = code;
@@ -46,7 +43,7 @@ namespace Flexinets.Radius.Core
             // A Message authenticator is required in status server packets, calculated last
             if (Code == PacketCode.StatusServer)
             {
-                AddAttribute("Message-Authenticator", new byte[16]);
+                AddMessageAuthenticator();
             }
         }
 
@@ -54,70 +51,46 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Creates a response packet with code, authenticator, identifier and secret from the request packet.
         /// </summary>
-        /// <param name="responseCode"></param>
-        /// <returns></returns>
-        public IRadiusPacket CreateResponsePacket(PacketCode responseCode)
-        {
-            return new RadiusPacket
+        public IRadiusPacket CreateResponsePacket(PacketCode responseCode) =>
+            new RadiusPacket
             {
                 Code = responseCode,
                 SharedSecret = SharedSecret,
                 Identifier = Identifier,
                 RequestAuthenticator = Authenticator
             };
-        }
 
 
         /// <summary>
         /// Gets a single attribute value with name cast to type
         /// Throws an exception if multiple attributes with the same name are found
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public T GetAttribute<T>(string name)
-        {
-            if (Attributes.TryGetValue(name, out var attribute))
-            {
-                return (T)attribute.Single();
-            }
-
-            // todo fix this...
-            return default!;
-        }
+        public T GetAttribute<T>(string name) => GetAttributes<T>(name).SingleOrDefault();
 
 
         /// <summary>
         /// Gets multiple attribute values with the same name cast to type
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="name"></param>
-        /// <returns></returns>
         public List<T> GetAttributes<T>(string name) =>
             Attributes.TryGetValue(name, out var attribute)
                 ? attribute.Cast<T>().ToList()
                 : new List<T>();
 
 
-        public void AddAttribute(string name, string value)
-        {
-            AddAttributeObject(name, value);
-        }
+        public void AddAttribute(string name, string value) => AddAttributeObject(name, value);
 
-        public void AddAttribute(string name, uint value)
-        {
-            AddAttributeObject(name, value);
-        }
+        public void AddAttribute(string name, uint value) => AddAttributeObject(name, value);
 
-        public void AddAttribute(string name, IPAddress value)
-        {
-            AddAttributeObject(name, value);
-        }
+        public void AddAttribute(string name, IPAddress value) => AddAttributeObject(name, value);
 
-        public void AddAttribute(string name, byte[] value)
-        {
-            AddAttributeObject(name, value);
-        }
+        public void AddAttribute(string name, byte[] value) => AddAttributeObject(name, value);
+
+        /// <summary>
+        /// Add a Message-Authenticator placeholder attribute to the packet
+        /// The actual value is calculated when assembling the packet
+        /// </summary>
+        public void AddMessageAuthenticator() => AddAttribute("Message-Authenticator", new byte[16]);
+
 
         internal void AddAttributeObject(string name, object value)
         {

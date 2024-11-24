@@ -1,7 +1,5 @@
 # Radius packet parser and assembler library for .Net.
 
-[![Build Status](https://tikali.visualstudio.com/Flexinets.Radius/_apis/build/status/vforteli.Flexinets.Radius.Core?branchName=master)](https://tikali.visualstudio.com/Flexinets.Radius/_build/latest?definitionId=1&branchName=master)
-
 Includes Core functionality for parsing and assembling Radius packets using a dictionary
 
 Conditionally compliant with RFCs  
@@ -9,8 +7,21 @@ https://tools.ietf.org/html/rfc2865
 https://tools.ietf.org/html/rfc2866  
 https://tools.ietf.org/html/rfc5997
 
+## Projects
+
+### Flexinets.Radius.Core
+
+Radius protocol bits and pieces. Published to NuGet here:
 https://www.nuget.org/packages/Flexinets.Radius.Core/
 
-## Test stuff
+### Flexinets.Radius.Core.Tests
 
-echo "User-Name=user@example.com, User-Password=1234" | radclient -x host.docker.internal:1812 auth somesecret
+Tests...
+
+### Flexinets.Radius.TestClient
+
+Contains a minimal client which can be used to send test packets
+
+### Flexinets.Radius.TestServer
+
+Contains a minimal server for responding with a static username and password with basic attributes

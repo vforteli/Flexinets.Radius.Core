@@ -44,8 +44,7 @@ public class PacketHandlerRepository : IPacketHandlerRepository
     /// <summary>
     /// Try to find a packet handler for remote address
     /// </summary>
-    public Boolean TryGetHandler(IPAddress remoteAddress,
-        out (IPacketHandler packetHandler, String sharedSecret) handler)
+    public bool TryGetHandler(IPAddress remoteAddress, out (IPacketHandler packetHandler, string sharedSecret) handler)
     {
         if (_packetHandlerAddresses.TryGetValue(remoteAddress, out handler))
         {

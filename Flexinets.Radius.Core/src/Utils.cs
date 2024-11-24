@@ -1,9 +1,15 @@
 ﻿using System;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Flexinets.Radius.Core
 {
     public static class Utils
     {
+        private static readonly byte[] AuthenticatorZeros = new byte[16];
+
+
         /// <summary>
         /// Convert a string of hex encoded bytes to a byte array
         /// </summary>
@@ -23,10 +29,8 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Convert a byte array to a string of hex encoded bytes
         /// </summary>
-        public static string ToHexString(this byte[] bytes)
-        {
-            return BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "");
-        }
+        public static string ToHexString(this byte[] bytes) =>
+            BitConverter.ToString(bytes).ToLowerInvariant().Replace("-", "");
 
 
         /// <summary>
@@ -36,8 +40,13 @@ namespace Flexinets.Radius.Core
         {
             string? mccmnc = null;
             var type = (LocationType)bytes[0];
-            if (type == LocationType.CGI || type == LocationType.ECGI || type == LocationType.RAI ||
-                type == LocationType.SAI || type == LocationType.TAI || type == LocationType.TAIAndECGI)
+
+            if (type == LocationType.CGI
+                || type == LocationType.ECGI
+                || type == LocationType.RAI
+                || type == LocationType.SAI
+                || type == LocationType.TAI
+                || type == LocationType.TAIAndECGI)
             {
                 var mccDigit1 = (bytes[1] & 15).ToString();
                 var mccDigit2 = ((bytes[1] & 240) >> 4).ToString();
@@ -55,6 +64,110 @@ namespace Flexinets.Radius.Core
             }
 
             return (type, mccmnc);
+        }
+
+
+        /// <summary>
+        /// Validates a message authenticator attribute if one exists in the packet
+        /// Message-Authenticator = HMAC-MD5 (Type, Identifier, Length, Request Authenticator, Attributes)
+        /// The HMAC-MD5 function takes in two arguments:
+        /// The payload of the packet, which includes the 16 byte Message-Authenticator field filled with zeros
+        /// The shared secret
+        /// https://www.ietf.org/rfc/rfc2869.txt
+        /// </summary>
+        /// <param name="packetBytes">Packet bytes with the message authenticator set to zeros</param>
+        /// <param name="sharedSecret">Shared secret</param>
+        /// <param name="requestAuthenticator">Request authenticator if we are creating a response packet</param>
+        /// <param name="messageAuthenticatorPosition">Position of the message authenticator attribute in the packet bytes</param>
+        public static byte[] CalculateMessageAuthenticator(
+            byte[] packetBytes,
+            byte[] sharedSecret,
+            byte[]? requestAuthenticator,
+            int messageAuthenticatorPosition)
+        {
+            var temp = new byte[packetBytes.Length];
+            packetBytes.CopyTo(temp, 0);
+            Buffer.BlockCopy(AuthenticatorZeros, 0, temp, messageAuthenticatorPosition + 2, AuthenticatorZeros.Length);
+
+            requestAuthenticator?.CopyTo(temp, 4);
+
+            using var md5 = new HMACMD5(sharedSecret);
+            return md5.ComputeHash(temp);
+        }
+
+
+        /// <summary>
+        /// Creates a response authenticator
+        /// Response authenticator = MD5(Code+ID+Length+RequestAuth+Attributes+Secret)
+        /// Actually this means it is the response packet with the request authenticator and secret...
+        /// </summary>
+        /// <returns>Response authenticator for the packet</returns>
+        public static byte[] CalculateResponseAuthenticator(
+            byte[] sharedSecret,
+            byte[] requestAuthenticator,
+            byte[] packetBytes)
+        {
+            var responseAuthenticator = packetBytes.Concat(sharedSecret).ToArray();
+            Buffer.BlockCopy(requestAuthenticator, 0, responseAuthenticator, 4, 16);
+
+            using var md5 = MD5.Create();
+            return md5.ComputeHash(responseAuthenticator);
+        }
+
+
+        /// <summary>
+        /// Validate message authenticator in packet
+        /// </summary>
+        public static bool ValidateMessageAuthenticator(
+            byte[] packetBytes,
+            int packetLength,
+            int messageAuthenticatorPosition,
+            byte[] sharedSecret,
+            byte[]? requestAuthenticator)
+        {
+            var messageAuthenticator =
+                packetBytes[(messageAuthenticatorPosition + 2)..(messageAuthenticatorPosition + 16 + 2)];
+
+            var tempPacket = new byte[packetLength];
+            Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);
+
+            var calculatedMessageAuthenticator = CalculateMessageAuthenticator(
+                tempPacket,
+                sharedSecret,
+                requestAuthenticator,
+                messageAuthenticatorPosition);
+
+            return calculatedMessageAuthenticator.SequenceEqual(messageAuthenticator);
+        }
+
+
+        /// <summary>
+        /// Calculate the request authenticator used in accounting, disconnect and coa requests
+        /// </summary>
+        internal static byte[] CalculateRequestAuthenticator(byte[] sharedSecret, byte[] packetBytes) =>
+            CalculateResponseAuthenticator(sharedSecret, new byte[16], packetBytes);
+
+
+        /// <summary>
+        /// Get a pretty string representation of the packet
+        /// </summary>
+        public static string GetPacketString(IRadiusPacket packet)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Packet dump for {packet.Identifier}:");
+            foreach (var attribute in packet.Attributes)
+            {
+                if (attribute.Key == "User-Password")
+                {
+                    sb.AppendLine($"{attribute.Key} length : {attribute.Value.First().ToString()?.Length}");
+                }
+                else
+                {
+                    attribute.Value.ForEach(o => sb.AppendLine($"{attribute.Key} : {o} [{o.GetType()}]"));
+                }
+            }
+
+            return sb.ToString();
         }
     }
 }

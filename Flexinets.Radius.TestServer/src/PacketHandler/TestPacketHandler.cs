@@ -25,16 +25,16 @@ public class TestPacketHandler : IPacketHandler
             var username = packet.GetAttribute<string>("User-Name");
             var password = packet.GetAttribute<string>("User-Password");
 
-            if (username == "user@example.com" && password == "1234")
+            if (username == "nemo" && password == "arctangent")
             {
                 var response = packet.CreateResponsePacket(PacketCode.AccessAccept);
-                response.AddAttribute("Message-Authenticator", new byte[16]);
+                response.AddMessageAuthenticator();
                 response.AddAttribute("Acct-Interim-Interval", 60);
                 return response;
             }
 
             var rejectPacket = packet.CreateResponsePacket(PacketCode.AccessReject);
-            rejectPacket.AddAttribute("Message-Authenticator", new byte[16]);
+            rejectPacket.AddMessageAuthenticator();
             return rejectPacket;
         }
 
@@ -47,5 +47,6 @@ public class TestPacketHandler : IPacketHandler
     /// </summary>
     public void Dispose()
     {
+        GC.SuppressFinalize(this);
     }
 }

@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Flexinets.Radius.Core", "Fl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flexinets.Radius.Core.Tests", "Flexinets.Radius.Core.Tests\Flexinets.Radius.Core.Tests.csproj", "{3091C312-37D1-448D-A4BE-5E4786ADCC16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flexinets.Radius.RadiusServer", "RadiusTestServer\Flexinets.Radius.RadiusServer.csproj", "{DCE0CB2B-0C08-429E-8830-F37F6922E210}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flexinets.Radius.TestServer", "Flexinets.Radius.TestServer\Flexinets.Radius.TestServer.csproj", "{DCE0CB2B-0C08-429E-8830-F37F6922E210}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flexinets.Radius.TestClient", "Flexinets.Radius.TestClient\Flexinets.Radius.TestClient.csproj", "{02253F7F-DD7A-4A6F-A2CB-58E724940131}"
 EndProject
