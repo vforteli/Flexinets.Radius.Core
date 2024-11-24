@@ -11,6 +11,14 @@ https://tools.ietf.org/html/rfc5997
 
 https://www.nuget.org/packages/Flexinets.Radius.Core/
 
+## Server
+
+The project in folder RadiusTestServer/ contains a minimal server with a packet handler with a static username and password.
+
+## Client
+
+The project in folder Flexinests.Radius.TestClient contains a minimal client which can be used to send test packets
+
 ## Test stuff
 
 echo "User-Name=user@example.com, User-Password=1234" | radclient -x host.docker.internal:1812 auth somesecret
