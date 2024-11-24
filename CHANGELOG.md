@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.0.0] - 2024-11-24
+## [3.0.1] - 2024-11-24
 
 ### Breaking changes
 

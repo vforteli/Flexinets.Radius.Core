@@ -29,3 +29,4 @@ server.Start();
 Console.WriteLine("Press any key to stop...");
 Console.ReadKey();
 Console.WriteLine("Stopping...");
+server.Stop();

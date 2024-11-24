@@ -216,6 +216,7 @@ public class RadiusCoreTests
     /// <summary>
     /// Test parsing and rebuilding a packet
     /// </summary>
+    [Obsolete]
     [TestCase]
     public void TestPacketParserAndAssemblerStream()
     {
@@ -235,6 +236,7 @@ public class RadiusCoreTests
     /// <summary>
     /// Test parsing and rebuilding a packet
     /// </summary>
+    [Obsolete]
     [TestCase]
     public void TestPacketParserAndAssemblerStreamExtraDataIgnored()
     {
@@ -482,5 +484,25 @@ public class RadiusCoreTests
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
         Assert.Throws<MessageAuthenticatorException>(() =>
             radiusPacketParser.Parse(response, Encoding.UTF8.GetBytes(secret), requestAuthenticator));
+    }
+
+    /// <summary>
+    /// Test message authenticator validation success with no side effect
+    /// </summary>
+    [TestCase]
+    public void TestVendorSpecificAttribute()
+    {
+        // "3GPP-IMSI-MCC-MNC": "24001"
+        var bytes = Utils.StringToByteArray("000028af08073234303031");
+
+        var vsa = new VendorSpecificAttribute(bytes);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vsa.VendorId, Is.EqualTo(10415));
+            Assert.That(vsa.VendorCode, Is.EqualTo(8));
+            Assert.That(vsa.Value.ToHexString(), Is.EqualTo("3234303031"));
+            Assert.That(vsa.Length, Is.EqualTo(7));
+        });
     }
 }

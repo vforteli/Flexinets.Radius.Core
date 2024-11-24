@@ -12,11 +12,12 @@ var loggerFactory = LoggerFactory.Create(o =>
 
 var logger = loggerFactory.CreateLogger(nameof(Program));
 
-var radiusPacketParser = new RadiusPacketParser(
-    loggerFactory.CreateLogger<RadiusPacketParser>(),
-    RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary));
+using var client = new RadiusClient(
+    new IPEndPoint(IPAddress.Any, 58733),
+    new RadiusPacketParser(
+        loggerFactory.CreateLogger<RadiusPacketParser>(),
+        RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary)));
 
-using var client = new RadiusClient(new IPEndPoint(IPAddress.Any, 58733), radiusPacketParser);
 
 var requestPacket = new RadiusPacket(PacketCode.AccessRequest, 0, "xyzzy5461");
 requestPacket.AddMessageAuthenticator(); // Add message authenticator for blast radius
