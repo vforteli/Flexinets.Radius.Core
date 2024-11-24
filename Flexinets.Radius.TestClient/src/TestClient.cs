@@ -52,7 +52,7 @@ public class RadiusClient(IPEndPoint localEndpoint, IRadiusPacketParser radiusPa
             {
                 return radiusPacketParser.Parse(
                     completionSource.Task.Result.Buffer,
-                    requestPacket.SharedSecret ?? throw new ArgumentNullException(nameof(requestPacket.SharedSecret)),
+                    requestPacket.SharedSecret,
                     requestPacket.Authenticator);
             }
 

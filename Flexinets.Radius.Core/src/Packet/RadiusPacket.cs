@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
@@ -15,7 +16,7 @@ namespace Flexinets.Radius.Core
         public byte Identifier { get; internal set; }
         public byte[] Authenticator { get; internal set; } = new byte[16];
         public IDictionary<string, List<object>> Attributes { get; set; } = new Dictionary<string, List<object>>();
-        public byte[]? SharedSecret { get; internal set; }
+        public byte[] SharedSecret { get; internal set; } = Array.Empty<byte>();
         public byte[]? RequestAuthenticator { get; internal set; }
 
 
