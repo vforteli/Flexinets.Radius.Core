@@ -25,7 +25,7 @@ public class TestPacketHandler : IPacketHandler
             var username = packet.GetAttribute<string>("User-Name");
             var password = packet.GetAttribute<string>("User-Password");
 
-            if (username == "user@example.com" && password == "1234")
+            if (username == "nemo" && password == "arctangent")
             {
                 var response = packet.CreateResponsePacket(PacketCode.AccessAccept);
                 response.AddMessageAuthenticator();

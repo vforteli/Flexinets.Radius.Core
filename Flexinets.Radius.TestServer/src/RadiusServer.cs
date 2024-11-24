@@ -85,7 +85,8 @@ public class RadiusServer(
             }
             catch (ObjectDisposedException)
             {
-            } // This is thrown when udpclient is disposed, can be safely ignored
+                // This is thrown when udpclient is disposed, can be safely ignored
+            }
             catch (Exception ex)
             {
                 logger.LogCritical(ex, "Something went wrong receiving packet");

@@ -10,14 +10,15 @@ var loggerFactory = LoggerFactory.Create(o =>
     o.SetMinimumLevel(LogLevel.Trace);
 });
 
-var dictionary = RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary);
 var handlerRepository = new PacketHandlerRepository();
-handlerRepository.AddPacketHandler(IPAddress.Any, new TestPacketHandler(), "somesecret");
+handlerRepository.AddPacketHandler(IPAddress.Any, new TestPacketHandler(), "xyzzy5461");
 
 var server = new RadiusServer(
     new UdpClientFactory(),
     new IPEndPoint(IPAddress.Any, 1812),
-    new RadiusPacketParser(loggerFactory.CreateLogger<RadiusPacketParser>(), dictionary),
+    new RadiusPacketParser(
+        loggerFactory.CreateLogger<RadiusPacketParser>(),
+        RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary)),
     RadiusServerType.Authentication,
     handlerRepository,
     loggerFactory.CreateLogger<RadiusServer>());

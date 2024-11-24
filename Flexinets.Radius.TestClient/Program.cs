@@ -12,23 +12,26 @@ var loggerFactory = LoggerFactory.Create(o =>
 
 var logger = loggerFactory.CreateLogger(nameof(Program));
 
-var dictionary = RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary);
-var radiusPacketParser = new RadiusPacketParser(loggerFactory.CreateLogger<RadiusPacketParser>(), dictionary);
+var radiusPacketParser = new RadiusPacketParser(
+    loggerFactory.CreateLogger<RadiusPacketParser>(),
+    RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary));
 
 using var client = new RadiusClient(new IPEndPoint(IPAddress.Any, 58733), radiusPacketParser);
 
-
 var requestPacket = new RadiusPacket(PacketCode.AccessRequest, 0, "xyzzy5461");
-requestPacket.AddMessageAuthenticator();
+requestPacket.AddMessageAuthenticator(); // Add message authenticator for blast radius
 requestPacket.AddAttribute("User-Name", "nemo");
 requestPacket.AddAttribute("User-Password", "arctangent");
 
 logger.LogInformation("Sending packet...");
-var responsePacket = await client.SendPacketAsync(requestPacket, new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1812));
+
+var responsePacket = await client.SendPacketAsync(
+    requestPacket,
+    new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1812));
+
 if (responsePacket.Code == PacketCode.AccessAccept)
 {
     // Hooray  
-    Console.WriteLine("Access accepted!");
+    logger.LogInformation("Access accepted \\o/");
+    logger.LogDebug(Utils.GetPacketString(responsePacket));
 }
-
-logger.LogDebug(Utils.GetPacketString(responsePacket));
