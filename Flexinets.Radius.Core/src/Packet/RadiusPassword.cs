@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -27,12 +28,8 @@ namespace Flexinets.Radius.Core
         /// </summary>
         private static byte[] CreateKey(byte[] sharedSecret, byte[] authenticator)
         {
-            var key = new byte[16 + sharedSecret.Length];
-            Buffer.BlockCopy(sharedSecret, 0, key, 0, sharedSecret.Length);
-            Buffer.BlockCopy(authenticator, 0, key, sharedSecret.Length, authenticator.Length);
-
             using var md5 = MD5.Create();
-            return md5.ComputeHash(key);
+            return md5.ComputeHash(sharedSecret.Concat(authenticator).ToArray());
         }
 
 

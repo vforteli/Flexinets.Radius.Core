@@ -1,8 +1,9 @@
-﻿using Flexinets.Net;
+using Flexinets.Net;
 using Flexinets.Radius.Core;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace Flexinets.Radius;
@@ -21,9 +22,7 @@ public class RadiusServer(
     IPacketHandlerRepository packetHandlerRepository,
     ILogger<RadiusServer> logger) : IDisposable
 {
-    private IUdpClient? _server;
-
-    public bool Running { get; private set; }
+    private IUdpClient? _udpClient;
 
 
     /// <summary>
@@ -31,10 +30,9 @@ public class RadiusServer(
     /// </summary>
     public void Start()
     {
-        if (!Running)
+        if (_udpClient == null)
         {
-            _server = udpClientFactory.CreateClient(localEndpoint);
-            Running = true;
+            _udpClient = udpClientFactory.CreateClient(localEndpoint);
             logger.LogInformation("Starting Radius server on {localEndpoint}", localEndpoint);
             _ = StartReceiveLoopAsync();
             logger.LogInformation("Server started");
@@ -51,11 +49,11 @@ public class RadiusServer(
     /// </summary>
     public void Stop()
     {
-        if (Running)
+        if (_udpClient != null)
         {
             logger.LogInformation("Stopping server");
-            Running = false;
-            _server?.Dispose();
+            _udpClient.Dispose();
+            _udpClient = null;
             logger.LogInformation("Stopped");
         }
         else
@@ -70,22 +68,19 @@ public class RadiusServer(
     /// </summary>
     private async Task StartReceiveLoopAsync()
     {
-        while (Running)
+        while (_udpClient != null)
         {
             try
             {
-                if (_server == null)
-                {
-                    break;
-                }
-
-                var response = await _server.ReceiveAsync();
+                var response = await _udpClient.ReceiveAsync();
                 _ = Task.Factory.StartNew(() => HandlePacket(response.RemoteEndPoint, response.Buffer),
                     TaskCreationOptions.LongRunning);
             }
-            catch (ObjectDisposedException)
+            catch (ObjectDisposedException) // This is thrown when udpclient is disposed, can be safely ignored
             {
-                // This is thrown when udpclient is disposed, can be safely ignored
+            }
+            catch (SocketException ex) when (ex.ErrorCode == 89)
+            {
             }
             catch (Exception ex)
             {
@@ -98,7 +93,7 @@ public class RadiusServer(
     /// <summary>
     /// Used to handle the packets asynchronously
     /// </summary>
-    private void HandlePacket(IPEndPoint remoteEndpoint, byte[] packetBytes)
+    private async Task HandlePacket(IPEndPoint remoteEndpoint, byte[] packetBytes)
     {
         try
         {
@@ -108,9 +103,10 @@ public class RadiusServer(
             {
                 var responsePacket = GetResponsePacket(handler.packetHandler, handler.sharedSecret, packetBytes,
                     remoteEndpoint);
+
                 if (responsePacket != null)
                 {
-                    SendResponsePacket(responsePacket, remoteEndpoint);
+                    await SendResponsePacketAsync(responsePacket, remoteEndpoint);
                 }
             }
             else
@@ -141,7 +137,7 @@ public class RadiusServer(
     /// <summary>
     /// Parses a packet and gets a response packet from the handler
     /// </summary>
-    internal IRadiusPacket GetResponsePacket(
+    private IRadiusPacket? GetResponsePacket(
         IPacketHandler packetHandler,
         string sharedSecret,
         byte[] packetBytes,
@@ -176,6 +172,12 @@ public class RadiusServer(
         var sw = Stopwatch.StartNew();
         var responsePacket = packetHandler.HandlePacket(requestPacket);
 
+        if (responsePacket == null)
+        {
+            logger.LogInformation("Handler declined to respond");
+            return null;
+        }
+
         logger.LogDebug(
             "{remoteEndpoint} Id={responsePacket.Identifier}, Received {response.PacketCode} from handler in {sw.ElapsedMilliseconds}ms",
             remoteEndpoint, responsePacket.Identifier, responsePacket.Code, sw.ElapsedMilliseconds);
@@ -193,10 +195,13 @@ public class RadiusServer(
     /// <summary>
     /// Sends a packet
     /// </summary>
-    private void SendResponsePacket(IRadiusPacket responsePacket, IPEndPoint remoteEndpoint)
+    private async Task SendResponsePacketAsync(IRadiusPacket responsePacket, IPEndPoint remoteEndpoint)
     {
+        ArgumentNullException.ThrowIfNull(_udpClient);
+
         var responseBytes = radiusPacketParser.GetBytes(responsePacket);
-        _server?.Send(responseBytes, responseBytes.Length, remoteEndpoint);
+        await _udpClient.SendAsync(responseBytes, responseBytes.Length, remoteEndpoint);
+
         logger.LogInformation("{responsePacket.Code} sent to {remoteEndpoint} Id={responsePacket.Identifier}",
             responsePacket.Code, remoteEndpoint, responsePacket.Identifier);
     }
@@ -208,6 +213,6 @@ public class RadiusServer(
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-        _server?.Dispose();
+        _udpClient?.Dispose();
     }
 }

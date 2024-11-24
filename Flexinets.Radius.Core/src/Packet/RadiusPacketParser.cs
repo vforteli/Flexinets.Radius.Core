@@ -1,12 +1,11 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace Flexinets.Radius.Core
 {
-    public class RadiusPacketParser : IRadiusPacketParser
+    public partial class RadiusPacketParser : IRadiusPacketParser
     {
         private readonly ILogger _logger;
         private readonly IRadiusDictionary _radiusDictionary;
@@ -44,96 +43,18 @@ namespace Flexinets.Radius.Core
                 SharedSecret = sharedSecret,
                 Identifier = packetBytes[1],
                 Code = (PacketCode)packetBytes[0],
+                Authenticator = packetBytes[4..20],
             };
 
-            Buffer.BlockCopy(packetBytes, 4, packet.Authenticator, 0, 16);
-
-            if (packet.Code == PacketCode.AccountingRequest || packet.Code == PacketCode.DisconnectRequest)
+            if ((packet.Code == PacketCode.AccountingRequest || packet.Code == PacketCode.DisconnectRequest) &&
+                !packet.Authenticator.SequenceEqual(
+                    Utils.CalculateRequestAuthenticator(packet.SharedSecret, packetBytes)))
             {
-                if (!packet.Authenticator.SequenceEqual(Utils.CalculateRequestAuthenticator(
-                        packet.SharedSecret,
-                        packetBytes)))
-                {
-                    throw new InvalidOperationException(
-                        $"Invalid request authenticator in packet {packet.Identifier}, check secret?");
-                }
+                throw new InvalidOperationException(
+                    $"Invalid request authenticator in packet {packet.Identifier}, check secret?");
             }
 
-            // The rest are attribute value pairs
-            var position = 20;
-            var messageAuthenticatorPosition = 0;
-            while (position < packetLength)
-            {
-                var typeCode = packetBytes[position];
-                var length = packetBytes[position + 1];
-
-                var contentBytes = new byte[length - 2];
-                Buffer.BlockCopy(packetBytes, position + 2, contentBytes, 0, length - 2);
-
-                try
-                {
-                    if (typeCode == 26) // VSA
-                    {
-                        var vsa = new VendorSpecificAttribute(contentBytes);
-                        var vendorAttributeDefinition =
-                            _radiusDictionary.GetVendorAttribute(vsa.VendorId, vsa.VendorCode);
-                        if (vendorAttributeDefinition == null)
-                        {
-                            _logger.LogInformation($"Unknown vsa: {vsa.VendorId}:{vsa.VendorCode}");
-                        }
-                        else
-                        {
-                            try
-                            {
-                                packet.AddAttributeObject(
-                                    vendorAttributeDefinition.Name,
-                                    Attribute.ToObject(vsa.Value,
-                                        vendorAttributeDefinition.Type,
-                                        typeCode,
-                                        packet.Authenticator,
-                                        packet.SharedSecret));
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, $"Something went wrong with vsa {vendorAttributeDefinition.Name}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var attributeDefinition = _radiusDictionary.GetAttribute(typeCode) ??
-                                                  throw new ArgumentNullException(nameof(typeCode));
-                        if (attributeDefinition.Code == 80)
-                        {
-                            messageAuthenticatorPosition = position;
-                        }
-
-                        try
-                        {
-                            packet.AddAttributeObject(
-                                attributeDefinition.Name,
-                                Attribute.ToObject(contentBytes, attributeDefinition.Type,
-                                    typeCode,
-                                    packet.Authenticator, packet.SharedSecret));
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, $"Something went wrong with {attributeDefinition.Name}");
-                            _logger.LogDebug($"Attribute bytes: {contentBytes.ToHexString()}");
-                        }
-                    }
-                }
-                catch (KeyNotFoundException)
-                {
-                    _logger.LogWarning($"Attribute {typeCode} not found in dictionary");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Something went wrong parsing attribute {typeCode}");
-                }
-
-                position += length;
-            }
+            var messageAuthenticatorPosition = AddAttributesToPacket(packet, packetBytes, packetLength);
 
             // check blast radius for all Access* packets
             if (packet.Code == PacketCode.AccessAccept
@@ -168,118 +89,91 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
-        /// Tries to get a packet from the stream. Returns true if successful
-        /// Returns false if no packet could be parsed or stream is empty ie closing
-        /// </summary>
-        public bool TryParsePacketFromStream(
-            Stream stream,
-            out IRadiusPacket? packet,
-            byte[] sharedSecret,
-            byte[]? requestAuthenticator = null)
-        {
-            var packetHeaderBytes = new byte[4];
-            var i = stream.Read(packetHeaderBytes, 0, 4);
-            if (i != 0)
-            {
-                try
-                {
-                    var packetLength = BitConverter.ToUInt16(packetHeaderBytes.Reverse().ToArray(), 0);
-                    var packetContentBytes = new byte[packetLength - 4];
-                    stream.Read(packetContentBytes, 0,
-                        packetContentBytes
-                            .Length); // todo stream.read should use loop in case everything is not available immediately
-
-                    packet = Parse(packetHeaderBytes.Concat(packetContentBytes).ToArray(), sharedSecret,
-                        requestAuthenticator);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Unable to parse packet from stream");
-                }
-            }
-
-            packet = null;
-            return false;
-        }
-
-
-        /// <summary>
         /// Get the raw packet bytes
         /// </summary>
         public byte[] GetBytes(IRadiusPacket packet)
         {
             var (attributeBytes, messageAuthenticatorPosition) = GetAttributesBytes(packet);
 
-            var packetBytes = new List<byte>
-                {
-                    (byte)packet.Code,
-                    packet.Identifier,
-                }
+            var packetBytes = new List<byte> { (byte)packet.Code, packet.Identifier, }
                 // Populate packet length... Network byte order...
                 .Concat(BitConverter.GetBytes((ushort)(20 + attributeBytes.Length)).Reverse())
-                // Placeholder for authenticator, will be populated later
-                .Concat(new byte[16])
-                // Populate the attribute value pairs
-                .Concat(attributeBytes)
+                .Concat(new byte[16]) // Placeholder for authenticator, will be populated later
+                .Concat(attributeBytes) // Populate the attribute value pairs
                 .ToArray();
 
-
-            if (packet.Code == PacketCode.AccountingRequest
-                || packet.Code == PacketCode.DisconnectRequest
-                || packet.Code == PacketCode.CoaRequest)
+            // Different types of packets have different ways of handling the authenticators
+            switch (packet.Code)
             {
-                if (messageAuthenticatorPosition != 0)
+                case PacketCode.AccountingRequest:
+                case PacketCode.DisconnectRequest:
+                case PacketCode.CoaRequest:
                 {
-                    var messageAuthenticator =
-                        Utils.CalculateMessageAuthenticator(packetBytes, packet.SharedSecret, null,
+                    HandleRequestMessageAuthenticator(packet.SharedSecret, messageAuthenticatorPosition, packetBytes);
+                    Buffer.BlockCopy(
+                        Utils.CalculateRequestAuthenticator(packet.SharedSecret, packetBytes),
+                        0, packetBytes, 4, 16);
+                    break;
+                }
+                case PacketCode.StatusServer:
+                case PacketCode.AccessRequest:
+                {
+                    Buffer.BlockCopy(packet.Authenticator, 0, packetBytes, 4, 16);
+                    HandleRequestMessageAuthenticator(packet.SharedSecret, messageAuthenticatorPosition, packetBytes);
+                    break;
+                }
+                case PacketCode.AccessAccept:
+                case PacketCode.AccessReject:
+                case PacketCode.AccountingResponse:
+                case PacketCode.AccessChallenge:
+                case PacketCode.StatusClient:
+                case PacketCode.DisconnectAck:
+                case PacketCode.DisconnectNak:
+                case PacketCode.CoaAck:
+                case PacketCode.CoaNak:
+                default:
+                {
+                    if (messageAuthenticatorPosition != 0)
+                    {
+                        var messageAuthenticator = Utils.CalculateResponseMessageAuthenticator(
+                            packetBytes,
+                            packet.SharedSecret,
+                            packet.RequestAuthenticator ?? throw new ArgumentNullException(),
                             messageAuthenticatorPosition);
 
-                    Buffer.BlockCopy(messageAuthenticator, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
-                }
+                        Buffer.BlockCopy(messageAuthenticator, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
+                    }
 
-                var authenticator = Utils.CalculateRequestAuthenticator(packet.SharedSecret, packetBytes);
-
-                Buffer.BlockCopy(authenticator, 0, packetBytes, 4, 16);
-            }
-            else if (packet.Code == PacketCode.StatusServer
-                     || packet.Code == PacketCode.AccessRequest)
-            {
-                Buffer.BlockCopy(packet.Authenticator, 0, packetBytes, 4, 16);
-
-                if (messageAuthenticatorPosition != 0)
-                {
-                    var messageAuthenticator = Utils.CalculateMessageAuthenticator(
-                        packetBytes,
+                    var authenticator = Utils.CalculateResponseAuthenticator(
                         packet.SharedSecret,
-                        packet.RequestAuthenticator,
-                        messageAuthenticatorPosition);
+                        packet.RequestAuthenticator ??
+                        throw new ArgumentNullException(nameof(packet.RequestAuthenticator)),
+                        packetBytes);
 
-                    Buffer.BlockCopy(messageAuthenticator, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
+                    Buffer.BlockCopy(authenticator, 0, packetBytes, 4, 16);
+                    break;
                 }
-            }
-            else
-            {
-                if (messageAuthenticatorPosition != 0)
-                {
-                    var messageAuthenticator = Utils.CalculateMessageAuthenticator(
-                        packetBytes,
-                        packet.SharedSecret,
-                        packet.RequestAuthenticator,
-                        messageAuthenticatorPosition);
-
-                    Buffer.BlockCopy(messageAuthenticator, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
-                }
-
-                var authenticator = Utils.CalculateResponseAuthenticator(
-                    packet.SharedSecret,
-                    packet.RequestAuthenticator ?? throw new ArgumentNullException(nameof(packet.RequestAuthenticator)),
-                    packetBytes);
-
-                Buffer.BlockCopy(authenticator, 0, packetBytes, 4, 16);
             }
 
             return packetBytes;
+        }
+
+
+        /// <summary>
+        /// Add a request message authenticator to to the packet if applicable
+        /// </summary>
+        private static void HandleRequestMessageAuthenticator(byte[] sharedSecret, int messageAuthenticatorPosition,
+            byte[] packetBytes)
+        {
+            if (messageAuthenticatorPosition != 0)
+            {
+                var messageAuthenticator = Utils.CalculateRequestMessageAuthenticator(
+                    packetBytes,
+                    sharedSecret,
+                    messageAuthenticatorPosition);
+
+                Buffer.BlockCopy(messageAuthenticator, 0, packetBytes, messageAuthenticatorPosition + 2, 16);
+            }
         }
 
 
@@ -338,6 +232,95 @@ namespace Flexinets.Radius.Core
             }));
 
             return (attributesBytes.ToArray(), messageAuthenticatorPosition);
+        }
+
+
+        /// <summary>
+        /// Populate packet with attributes and return position of Message-Authenticator if found
+        /// Yees, very mutating... anyway
+        /// </summary>
+        /// <returns>Message-Authenticator position if found</returns>
+        private int AddAttributesToPacket(RadiusPacket packet, byte[] packetBytes, int packetLength)
+        {
+            var position = 20;
+            var messageAuthenticatorPosition = 0;
+
+            while (position < packetLength)
+            {
+                var typeCode = packetBytes[position];
+                var attributeLength = packetBytes[position + 1];
+                var attributeValueBytes = packetBytes[(position + 2)..(position + attributeLength)];
+
+                try
+                {
+                    if (typeCode == 26) // VSA
+                    {
+                        var vsa = new VendorSpecificAttribute(attributeValueBytes);
+                        var vsaType = _radiusDictionary.GetVendorAttribute(vsa.VendorId, vsa.VendorCode);
+
+                        if (vsaType == null)
+                        {
+                            _logger.LogInformation("Unknown vsa: {id}:{code}", vsa.VendorId, vsa.VendorCode);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                packet.AddAttributeObject(
+                                    vsaType.Name,
+                                    Attribute.ToObject(
+                                        vsa.Value,
+                                        vsaType.Type,
+                                        typeCode,
+                                        packet.Authenticator,
+                                        packet.SharedSecret));
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Something went wrong with vsa {name}", vsaType.Name);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var attributeType = _radiusDictionary.GetAttribute(typeCode) ??
+                                            throw new ArgumentNullException(nameof(typeCode));
+                        if (attributeType.Code == 80)
+                        {
+                            messageAuthenticatorPosition = position;
+                        }
+
+                        try
+                        {
+                            packet.AddAttributeObject(
+                                attributeType.Name,
+                                Attribute.ToObject(
+                                    attributeValueBytes,
+                                    attributeType.Type,
+                                    typeCode,
+                                    packet.Authenticator,
+                                    packet.SharedSecret));
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Something went wrong with {attributeTypeName}", attributeType.Name);
+                            _logger.LogDebug("Attribute bytes: {hex}", attributeValueBytes.ToHexString());
+                        }
+                    }
+                }
+                catch (KeyNotFoundException)
+                {
+                    _logger.LogWarning("Attribute {typeCode} not found in dictionary", typeCode);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Something went wrong parsing attribute {typeCode}", typeCode);
+                }
+
+                position += attributeLength;
+            }
+
+            return messageAuthenticatorPosition;
         }
     }
 }
