@@ -56,23 +56,38 @@ namespace Flexinets.Radius.Core
 
             var messageAuthenticatorPosition = AddAttributesToPacket(packet, packetBytes, packetLength);
 
-            // check blast radius for all Access* packets
             if (packet.Code == PacketCode.AccessAccept
                 || packet.Code == PacketCode.AccessChallenge
                 || packet.Code == PacketCode.AccessReject
                 || packet.Code == PacketCode.AccessRequest)
             {
-                if (messageAuthenticatorPosition == 0 && !_skipBlastRadiusChecks)
+                // Ensure packet contains a Message-Authenticator if it contains EAP-Message attributes                                 
+                // https://datatracker.ietf.org/doc/html/rfc3579#section-3.1
+                if (messageAuthenticatorPosition == 0 && packet.GetAttributes<object>("EAP-Message").Any())
                 {
-                    throw new MessageAuthenticatorException("No message authenticator found in packet");
+                    throw new MissingMessageAuthenticatorException(
+                        "No Message-Authenticator found in packet with EAP-Message attributes");
                 }
 
+                // Ensure a Message-Authenticator exists in Access* packets
+                // https://datatracker.ietf.org/doc/html/draft-ietf-radext-deprecating-radius/#section-5
+                if (messageAuthenticatorPosition == 0 && !_skipBlastRadiusChecks)
+                {
+                    throw new MissingMessageAuthenticatorException(
+                        "No Message-Authenticator found in packet and BLASTRadius checks enabled");
+                }
+
+                // The Message-Authenticator attribute should be first in AccessRequests
+                // and must be first in the other Access* packets
+                // https://datatracker.ietf.org/doc/html/draft-ietf-radext-deprecating-radius/#section-5.2
                 if (messageAuthenticatorPosition != 20 && !_skipBlastRadiusChecks)
                 {
-                    _logger.LogWarning("Message authenticator expected to be first attribute");
+                    _logger.LogWarning("Message-Authenticator should be first attribute");
                 }
             }
 
+
+            // If the packet contains a Message-Authenticator it must be valid
             if (messageAuthenticatorPosition != 0
                 && !Utils.ValidateMessageAuthenticator(
                     packetBytes,
@@ -81,7 +96,8 @@ namespace Flexinets.Radius.Core
                     sharedSecret,
                     requestAuthenticator))
             {
-                throw new MessageAuthenticatorException($"Invalid Message-Authenticator in packet {packet.Identifier}");
+                throw new InvalidMessageAuthenticatorException(
+                    $"Invalid Message-Authenticator in packet {packet.Identifier}");
             }
 
             return packet;
@@ -95,7 +111,7 @@ namespace Flexinets.Radius.Core
         {
             var (attributeBytes, messageAuthenticatorPosition) = GetAttributesBytes(packet);
 
-            var packetBytes = new List<byte> { (byte)packet.Code, packet.Identifier, }
+            var packetBytes = new List<byte> { (byte)packet.Code, packet.Identifier }
                 // Populate packet length... Network byte order...
                 .Concat(BitConverter.GetBytes((ushort)(20 + attributeBytes.Length)).Reverse())
                 .Concat(new byte[16]) // Placeholder for authenticator, will be populated later
@@ -124,8 +140,8 @@ namespace Flexinets.Radius.Core
                 }
                 case PacketCode.AccessAccept:
                 case PacketCode.AccessReject:
-                case PacketCode.AccountingResponse:
                 case PacketCode.AccessChallenge:
+                case PacketCode.AccountingResponse:
                 case PacketCode.StatusClient:
                 case PacketCode.DisconnectAck:
                 case PacketCode.DisconnectNak:
@@ -160,7 +176,7 @@ namespace Flexinets.Radius.Core
 
 
         /// <summary>
-        /// Add a request message authenticator to to the packet if applicable
+        /// Add a request message authenticator to the packet if applicable
         /// </summary>
         private static void HandleRequestMessageAuthenticator(byte[] sharedSecret, int messageAuthenticatorPosition,
             byte[] packetBytes)

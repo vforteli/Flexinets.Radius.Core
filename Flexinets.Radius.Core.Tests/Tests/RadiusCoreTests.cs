@@ -11,7 +11,10 @@ namespace Flexinets.Radius.Core.Tests;
 [TestFixture]
 public class RadiusCoreTests
 {
-    private IRadiusDictionary GetDictionary() => RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary);
+    private static IRadiusDictionary GetDictionary() => RadiusDictionary.Parse(DefaultDictionary.RadiusDictionary);
+
+    private static readonly RadiusPacketParser _radiusPacketParser =
+        new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
 
 
     /// <summary>
@@ -185,9 +188,7 @@ public class RadiusCoreTests
         var secret = "foo";
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
-        var requestAuthenticator = Utils.CalculateRequestAuthenticator(
-            Encoding.UTF8.GetBytes(secret),
-            Utils.StringToByteArray(packetBytes));
+
         Assert.That(
             () => radiusPacketParser.Parse(Utils.StringToByteArray(packetBytes), Encoding.UTF8.GetBytes(secret)),
             Throws.TypeOf<InvalidOperationException>());
@@ -365,8 +366,8 @@ public class RadiusCoreTests
         var secret = "xyzzy5461durr";
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
-        Assert.That(() => radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret)),
-            Throws.TypeOf<MessageAuthenticatorException>());
+        Assert.Throws<InvalidMessageAuthenticatorException>(() =>
+            radiusPacketParser.Parse(Utils.StringToByteArray(request), Encoding.UTF8.GetBytes(secret)));
     }
 
 
@@ -425,7 +426,7 @@ public class RadiusCoreTests
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
         var requestPacket = radiusPacketParser.Parse(request, Encoding.UTF8.GetBytes(secret));
-        Assert.That(Utils.ToHexString(request), Is.EqualTo(Utils.ToHexString(expected)));
+        Assert.That(request.ToHexString(), Is.EqualTo(expected.ToHexString()));
     }
 
 
@@ -482,12 +483,12 @@ public class RadiusCoreTests
         const string secret = "xyzzy5461";
 
         var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
-        Assert.Throws<MessageAuthenticatorException>(() =>
+        Assert.Throws<MissingMessageAuthenticatorException>(() =>
             radiusPacketParser.Parse(response, Encoding.UTF8.GetBytes(secret), requestAuthenticator));
     }
 
     /// <summary>
-    /// Test message authenticator validation success with no side effect
+    /// Test vendor attribute parsing
     /// </summary>
     [TestCase]
     public void TestVendorSpecificAttribute()
@@ -504,5 +505,58 @@ public class RadiusCoreTests
             Assert.That(vsa.Value.ToHexString(), Is.EqualTo("3234303031"));
             Assert.That(vsa.Length, Is.EqualTo(7));
         });
+    }
+
+
+    [TestCase]
+    public void CreatePacketWithEAPMessageValid()
+    {
+        const string secret = "xyzzy5461";
+
+        var packet = new RadiusPacket(PacketCode.AccessRequest, 0, secret);
+        packet.Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a");
+        packet.AddMessageAuthenticator();
+        packet.AddAttribute("User-Name", "nemo");
+        packet.AddAttribute("EAP-Message", new byte[10]);
+
+        Assert.DoesNotThrow(() => _radiusPacketParser.Parse(
+            _radiusPacketParser.GetBytes(packet),
+            Encoding.UTF8.GetBytes(secret)));
+    }
+
+
+    [TestCase]
+    public void CreatePacketWithEAPMessageMissingMessageAuthenticator()
+    {
+        const string secret = "xyzzy5461";
+
+        var packet = new RadiusPacket(PacketCode.AccessRequest, 0, secret);
+        packet.Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a");
+        packet.AddAttribute("User-Name", "nemo");
+        packet.AddAttribute("EAP-Message", new byte[10]);
+
+        Assert.Throws<MissingMessageAuthenticatorException>(() => _radiusPacketParser.Parse(
+            _radiusPacketParser.GetBytes(packet),
+            Encoding.UTF8.GetBytes(secret)));
+    }
+
+
+    [TestCase]
+    public void CreatePacketWithEAPMessageInvalidMessageAuthenticator()
+    {
+        const string secret = "xyzzy5461";
+
+        var packet = new RadiusPacket(PacketCode.AccessRequest, 0, secret);
+        packet.Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a");
+        packet.AddMessageAuthenticator();
+        packet.AddAttribute("User-Name", "nemo");
+        packet.AddAttribute("EAP-Message", new byte[10]);
+
+        var bytes = _radiusPacketParser.GetBytes(packet);
+        bytes[25] = 0; // Message-Authenticator is the first attribute here, so position 25 will be inside it
+
+        Assert.Throws<InvalidMessageAuthenticatorException>(() => _radiusPacketParser.Parse(
+            bytes,
+            Encoding.UTF8.GetBytes(secret)));
     }
 }
