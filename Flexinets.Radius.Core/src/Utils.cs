@@ -36,9 +36,9 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Get the mccmnc as a string from a 3GPP-User-Location-Info vendor attribute.
         /// </summary>
-        public static (LocationType locationType, string? mccmnc) GetMccMncFrom3GPPLocationInfo(byte[] bytes)
+        public static (LocationType locationType, string mccmnc) GetMccMncFrom3GPPLocationInfo(byte[] bytes)
         {
-            string? mccmnc = null;
+            string mccmnc = null;
             var type = (LocationType)bytes[0];
 
             if (type == LocationType.CGI
@@ -102,7 +102,7 @@ namespace Flexinets.Radius.Core
         private static byte[] CalculateMessageAuthenticator(
             byte[] packetBytes,
             byte[] sharedSecret,
-            byte[]? requestAuthenticator,
+            byte[] requestAuthenticator,
             int index)
         {
             var temp = new byte[packetBytes.Length];
@@ -111,8 +111,10 @@ namespace Flexinets.Radius.Core
 
             requestAuthenticator?.CopyTo(temp, 4);
 
-            using var md5 = new HMACMD5(sharedSecret);
-            return md5.ComputeHash(temp);
+            using (var md5 = new HMACMD5(sharedSecret))
+            {
+                return md5.ComputeHash(temp);
+            }
         }
 
 
@@ -130,8 +132,10 @@ namespace Flexinets.Radius.Core
             var bytes = packetBytes.Concat(sharedSecret).ToArray();
             Buffer.BlockCopy(requestAuthenticator, 0, bytes, 4, 16);
 
-            using var md5 = MD5.Create();
-            return md5.ComputeHash(bytes);
+            using (var md5 = MD5.Create())
+            {
+                return md5.ComputeHash(bytes);
+            }
         }
 
 
@@ -143,10 +147,9 @@ namespace Flexinets.Radius.Core
             int packetLength,
             int messageAuthenticatorPosition,
             byte[] sharedSecret,
-            byte[]? requestAuthenticator)
+            byte[] requestAuthenticator)
         {
-            var messageAuthenticator =
-                packetBytes[(messageAuthenticatorPosition + 2)..(messageAuthenticatorPosition + 16 + 2)];
+            var messageAuthenticator = packetBytes.Skip(messageAuthenticatorPosition + 2).Take(16).ToArray();
 
             var tempPacket = new byte[packetLength];
             Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);

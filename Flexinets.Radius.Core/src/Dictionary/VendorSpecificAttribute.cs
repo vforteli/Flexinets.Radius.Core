@@ -17,10 +17,10 @@ namespace Flexinets.Radius.Core
         /// <param name="contentBytes"></param>
         public VendorSpecificAttribute(byte[] contentBytes)
         {
-            VendorId = BitConverter.ToUInt32(contentBytes[..4].Reverse().ToArray());
+            VendorId = BitConverter.ToUInt32(contentBytes.Take(4).Reverse().ToArray(), 0);
             VendorCode = contentBytes[4];
             Length = contentBytes[5];
-            Value = contentBytes[6..];
+            Value = contentBytes.Skip(6).ToArray();
         }
     }
 }

@@ -28,8 +28,10 @@ namespace Flexinets.Radius.Core
         /// </summary>
         private static byte[] CreateKey(byte[] sharedSecret, byte[] authenticator)
         {
-            using var md5 = MD5.Create();
-            return md5.ComputeHash(sharedSecret.Concat(authenticator).ToArray());
+            using (var md5 = MD5.Create())
+            {
+                return md5.ComputeHash(sharedSecret.Concat(authenticator).ToArray());
+            }
         }
 
 

@@ -4,6 +4,6 @@ namespace Flexinets.Radius.Core
 {
     public interface IPacketHandler : IDisposable
     {
-        IRadiusPacket? HandlePacket(IRadiusPacket packet);
+        IRadiusPacket HandlePacket(IRadiusPacket packet);
     }
 }

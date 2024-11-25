@@ -15,31 +15,46 @@ namespace Flexinets.Radius.Core
             string type,
             uint code,
             byte[] authenticator,
-            byte[] sharedSecret) =>
-            type switch
+            byte[] sharedSecret)
+        {
+            switch (type)
             {
-                "string" => Encoding.UTF8.GetString(contentBytes),
-                "tagged-string" => Encoding.UTF8.GetString(contentBytes),
-                "octet" when code == 2 => RadiusPassword.Decrypt(sharedSecret, authenticator, contentBytes),
-                "octet" => contentBytes,
-                "integer" => BitConverter.ToUInt32(contentBytes.Reverse().ToArray(), 0),
-                "tagged-integer" => BitConverter.ToUInt32(contentBytes.Reverse().ToArray(), 0),
-                "ipaddr" => new IPAddress(contentBytes),
-                _ => throw new ArgumentException("Unknown type")
-            };
+                case "string":
+                case "tagged-string":
+                    return Encoding.UTF8.GetString(contentBytes);
+                case "octet" when code == 2:
+                    return RadiusPassword.Decrypt(sharedSecret, authenticator, contentBytes);
+                case "octet":
+                    return contentBytes;
+                case "integer":
+                case "tagged-integer":
+                    return BitConverter.ToUInt32(contentBytes.Reverse().ToArray(), 0);
+                case "ipaddr":
+                    return new IPAddress(contentBytes);
+                default:
+                    throw new ArgumentException("Unknown type");
+            }
+        }
 
 
         /// <summary>
         /// Gets the byte representation of an attribute object
         /// </summary>
-        public static byte[] ToBytes(object value) =>
-            value switch
+        public static byte[] ToBytes(object value)
+        {
+            switch (value)
             {
-                string stringValue => Encoding.UTF8.GetBytes(stringValue),
-                uint uintValue => BitConverter.GetBytes(uintValue).Reverse().ToArray(),
-                byte[] byteArray => byteArray,
-                IPAddress ipAddress => ipAddress.GetAddressBytes(),
-                _ => throw new NotImplementedException()
-            };
+                case string stringValue:
+                    return Encoding.UTF8.GetBytes(stringValue);
+                case uint uintValue:
+                    return BitConverter.GetBytes(uintValue).Reverse().ToArray();
+                case byte[] byteArray:
+                    return byteArray;
+                case IPAddress ipAddress:
+                    return ipAddress.GetAddressBytes();
+                default:
+                    throw new NotImplementedException();
+            }
+        }
     }
 }

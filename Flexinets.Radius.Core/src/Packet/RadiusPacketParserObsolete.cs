@@ -14,9 +14,9 @@ namespace Flexinets.Radius.Core
         [Obsolete("Use parse instead... this isnt async anyway")]
         public bool TryParsePacketFromStream(
             Stream stream,
-            out IRadiusPacket? packet,
+            out IRadiusPacket packet,
             byte[] sharedSecret,
-            byte[]? requestAuthenticator = null)
+            byte[] requestAuthenticator = null)
         {
             var packetHeaderBytes = new byte[4];
             var i = stream.Read(packetHeaderBytes, 0, 4);

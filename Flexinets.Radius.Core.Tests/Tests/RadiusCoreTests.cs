@@ -481,7 +481,8 @@ public class RadiusCoreTests
 
         const string secret = "xyzzy5461";
 
-        var radiusPacketParser = new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary());
+        var radiusPacketParser =
+            new RadiusPacketParser(NullLogger<RadiusPacketParser>.Instance, GetDictionary(), false);
         Assert.Throws<MessageAuthenticatorException>(() =>
             radiusPacketParser.Parse(response, Encoding.UTF8.GetBytes(secret), requestAuthenticator));
     }

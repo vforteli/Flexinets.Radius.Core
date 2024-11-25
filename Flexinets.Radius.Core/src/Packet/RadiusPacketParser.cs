@@ -18,7 +18,7 @@ namespace Flexinets.Radius.Core
         public RadiusPacketParser(
             ILogger<RadiusPacketParser> logger,
             IRadiusDictionary radiusDictionary,
-            bool skipBlastRadiusChecks = false)
+            bool skipBlastRadiusChecks = true)
         {
             _logger = logger;
             _radiusDictionary = radiusDictionary;
@@ -29,7 +29,7 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Parses packet bytes and returns an IRadiusPacket
         /// </summary>
-        public IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret, byte[]? requestAuthenticator = null)
+        public IRadiusPacket Parse(byte[] packetBytes, byte[] sharedSecret, byte[] requestAuthenticator = null)
         {
             var packetLength = BitConverter.ToUInt16(packetBytes.Skip(2).Take(2).Reverse().ToArray(), 0);
             if (packetBytes.Length < packetLength)
@@ -43,7 +43,7 @@ namespace Flexinets.Radius.Core
                 SharedSecret = sharedSecret,
                 Identifier = packetBytes[1],
                 Code = (PacketCode)packetBytes[0],
-                Authenticator = packetBytes[4..20],
+                Authenticator = packetBytes.Skip(4).Take(16).ToArray(),
             };
 
             if ((packet.Code == PacketCode.AccountingRequest || packet.Code == PacketCode.DisconnectRequest) &&
@@ -203,7 +203,7 @@ namespace Flexinets.Radius.Core
                         headerBytes[7] = (byte)(2 + contentBytes.Length); // length of the vsa part
                         break;
 
-                    case { } attributeType:
+                    case DictionaryAttribute attributeType:
                         headerBytes[0] = attributeType.Code;
 
                         // Encrypt password if this is a User-Password attribute
@@ -249,7 +249,7 @@ namespace Flexinets.Radius.Core
             {
                 var typeCode = packetBytes[position];
                 var attributeLength = packetBytes[position + 1];
-                var attributeValueBytes = packetBytes[(position + 2)..(position + attributeLength)];
+                var attributeValueBytes = packetBytes.Skip(position + 2).Take(attributeLength - 2).ToArray();
 
                 try
                 {

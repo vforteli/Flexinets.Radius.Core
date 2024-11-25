@@ -2,7 +2,9 @@ name: Build
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+      - release/**
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
   pull_request:
@@ -39,17 +41,16 @@ jobs:
           VERSION=${TAG#v}
           dotnet pack -c Release --no-build -p:PackageVersion=$VERSION
 
-      - name: Upload nuget package
-        if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || startsWith(github.ref, 'refs/tags/v')
+      - name: Upload nuget package artifact
+        if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') || startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/')
         uses: actions/upload-artifact@v4
         with:
           name: nugetpackage
           path: ./**/*.nupkg
 
-        # todo enable again when project has been modernized...
   prerelease:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     steps:

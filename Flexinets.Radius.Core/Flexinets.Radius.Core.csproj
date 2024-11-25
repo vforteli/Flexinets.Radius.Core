@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
-        <Nullable>enable</Nullable>
+        <TargetFramework>netstandard2.0</TargetFramework>        
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <IsPackable>true</IsPackable>
         <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
@@ -10,7 +9,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <VersionPrefix>3.0.1</VersionPrefix>
+        <VersionPrefix>2.0.1</VersionPrefix>
         <Title>Flexinets.Radius.Core</Title>
         <Authors>Verner Fortelius</Authors>
         <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>

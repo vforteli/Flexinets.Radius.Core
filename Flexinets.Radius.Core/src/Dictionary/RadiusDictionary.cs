@@ -61,7 +61,7 @@ namespace Flexinets.Radius.Core
         /// Read and parse dictionary from file in Radiator format
         /// </summary>
         public static async Task<IRadiusDictionary> LoadAsync(string dictionaryFilePath) =>
-            Parse(await File.ReadAllTextAsync(dictionaryFilePath));
+            Parse(await Task.FromResult(File.ReadAllText(dictionaryFilePath)));
 
 
         /// <summary>
@@ -88,13 +88,15 @@ namespace Flexinets.Radius.Core
         }
 
 
-        public DictionaryVendorAttribute? GetVendorAttribute(uint vendorId, byte vendorCode) =>
+        public DictionaryVendorAttribute GetVendorAttribute(uint vendorId, byte vendorCode) =>
             VendorSpecificAttributes.FirstOrDefault(o => o.VendorId == vendorId && o.VendorCode == vendorCode);
 
 
-        public DictionaryAttribute? GetAttribute(byte typecode) => Attributes.GetValueOrDefault(typecode);
+        public DictionaryAttribute GetAttribute(byte typecode) =>
+            Attributes.TryGetValue(typecode, out var attribute) ? attribute : null;
 
 
-        public DictionaryAttribute? GetAttribute(string name) => AttributeNames.GetValueOrDefault(name);
+        public DictionaryAttribute GetAttribute(string name) =>
+            AttributeNames.TryGetValue(name, out var attribute) ? attribute : null;
     }
 }
