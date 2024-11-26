@@ -1,4 +1,5 @@
-﻿using Flexinets.Radius.Core;
+using Flexinets.Radius.Core;
+using Flexinets.Radius.Core.PacketTypes;
 
 namespace Flexinets.Radius;
 
@@ -11,30 +12,30 @@ public class TestPacketHandler : IPacketHandler
     {
         await Task.CompletedTask.ConfigureAwait(false);
         
-        switch (packet.Code)
+        switch (packet)
         {
-            case PacketCode.AccountingRequest:
+            case AccountingRequest:
                 return packet.GetAttribute<AcctStatusType>("Acct-Status-Type") switch
                 {
-                    AcctStatusType.Start => packet.CreateResponsePacket(PacketCode.AccountingResponse),
-                    AcctStatusType.Stop => packet.CreateResponsePacket(PacketCode.AccountingResponse),
-                    AcctStatusType.InterimUpdate => packet.CreateResponsePacket(PacketCode.AccountingResponse),
+                    AcctStatusType.Start => new AccountingResponse(packet.Identifier),
+                    AcctStatusType.Stop => new AccountingResponse(packet.Identifier),
+                    AcctStatusType.InterimUpdate => new AccountingResponse(packet.Identifier),
                     _ => throw new InvalidOperationException("Couldnt handle request?!"),
                 };
-            case PacketCode.AccessRequest:
+            case AccessRequest:
             {
                 var username = packet.GetAttribute<string>("User-Name");
                 var password = packet.GetAttribute<string>("User-Password");
 
                 if (username == "nemo" && password == "arctangent")
                 {
-                    var response = packet.CreateResponsePacket(PacketCode.AccessAccept);
+                    var response = new AccessAccept(packet.Identifier);
                     response.AddMessageAuthenticator();
                     response.AddAttribute("Acct-Interim-Interval", 60);
                     return response;
                 }
 
-                var rejectPacket = packet.CreateResponsePacket(PacketCode.AccessReject);
+                var rejectPacket = new AccessReject(packet.Identifier);
                 rejectPacket.AddMessageAuthenticator();
                 return rejectPacket;
             }

@@ -2,6 +2,7 @@
 using System.Text;
 using Flexinets.Radius;
 using Flexinets.Radius.Core;
+using Flexinets.Radius.Core.PacketTypes;
 using Microsoft.Extensions.Logging;
 
 
@@ -21,7 +22,7 @@ using var client = new RadiusClient(
 
 
 var sharedSecret = Encoding.UTF8.GetBytes("xyzzy5461");
-var requestPacket = new RadiusPacket(PacketCode.AccessRequest, 0);
+var requestPacket = new AccessRequest(0);
 requestPacket.AddMessageAuthenticator(); // Add message authenticator for blast radius
 requestPacket.AddAttribute("User-Name", "nemo");
 requestPacket.AddAttribute("User-Password", "arctangent");
@@ -33,7 +34,7 @@ var responsePacket = await client.SendPacketAsync(
     sharedSecret,
     new IPEndPoint(IPAddress.Parse("127.0.0.1"), 1812));
 
-if (responsePacket.Code == PacketCode.AccessAccept)
+if (responsePacket is AccessAccept)
 {
     // Hooray  
     logger.LogInformation("Access accepted \\o/");

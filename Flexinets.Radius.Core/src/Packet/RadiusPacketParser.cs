@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Flexinets.Radius.Core.PacketTypes;
 using Microsoft.Extensions.Logging;
 
 namespace Flexinets.Radius.Core
@@ -34,9 +35,9 @@ namespace Flexinets.Radius.Core
             var (packet, messageAuthenticatorPosition) = ParsePacketBytes(ref packetBytes, sharedSecret);
 
             // Validate RequestAuthenticator for appropriate packet types
-            if ((packet.Code == PacketCode.AccountingRequest
-                 || packet.Code == PacketCode.DisconnectRequest
-                 || packet.Code == PacketCode.CoaRequest) && !packet.Authenticator.SequenceEqual(
+            if ((packet is AccountingRequest
+                 || packet is DisconnectRequest
+                 || packet is CoaRequest) && !packet.Authenticator.SequenceEqual(
                     Utils.CalculateRequestAuthenticator(sharedSecret, packetBytes)))
             {
                 throw new InvalidOperationException(
@@ -55,10 +56,10 @@ namespace Flexinets.Radius.Core
                     $"Invalid Message-Authenticator in packet {packet.Identifier}");
             }
 
-            if (packet.Code == PacketCode.AccessAccept
-                || packet.Code == PacketCode.AccessChallenge
-                || packet.Code == PacketCode.AccessReject
-                || packet.Code == PacketCode.AccessRequest)
+            if (packet is AccessAccept
+                || packet is AccessChallenge
+                || packet is AccessReject
+                || packet is AccessRequest)
             {
                 // Ensure packet contains a Message-Authenticator if it contains EAP-Message attributes                                 
                 // https://datatracker.ietf.org/doc/html/rfc3579#section-3.1
@@ -109,12 +110,10 @@ namespace Flexinets.Radius.Core
                 Array.Resize(ref packetBytes, packetLength);
             }
 
-            var packet = new RadiusPacket
-            {
-                Identifier = packetBytes[1],
-                Code = (PacketCode)packetBytes[0],
-                Authenticator = packetBytes[4..20],
-            };
+            var packet = RadiusPacket.CreateFromBytes((PacketCode)packetBytes[0]);
+            packet.Authenticator = packetBytes[4..20];
+            packet.Identifier = packetBytes[1];
+            packet.Code = (PacketCode)packetBytes[0];
 
             var messageAuthenticatorPosition =
                 AddAttributesToPacket(ref packet, packetBytes, packetLength, sharedSecret);
