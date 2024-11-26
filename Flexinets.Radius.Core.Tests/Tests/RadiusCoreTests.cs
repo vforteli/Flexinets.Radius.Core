@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Flexinets.Radius.Core.PacketTypes;
 
 namespace Flexinets.Radius.Core.Tests;
 
@@ -28,7 +29,7 @@ public class RadiusCoreTests
         const string expected =
             "010000380f403f9473978057bd83d5cb98f4227a01066e656d6f02120dbe708d93d413ce3196e43f782a0aee0406c0a80110050600000003";
 
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 0)
+        var packet = new AccessRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };
@@ -51,7 +52,7 @@ public class RadiusCoreTests
     {
         var expected = IPAddress.IPv6Loopback;
 
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 0)
+        var packet = new AccessRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };
@@ -73,7 +74,7 @@ public class RadiusCoreTests
     [TestCase]
     public void TestCreateAccessRequestPacketUnknownAttribute()
     {
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 0)
+        var packet = new AccessRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };
@@ -96,7 +97,7 @@ public class RadiusCoreTests
     {
         const string expected = "2801001e2ec8a0da729620319be0140bc28e92682c0a3039303432414638";
 
-        var packet = new RadiusPacket(PacketCode.DisconnectRequest, 1);
+        var packet = new DisconnectRequest(1);
         packet.AddAttribute("Acct-Session-Id", "09042AF8");
 
         Assert.That(RadiusPacketParser.GetBytes(packet, DefaultSecret).ToHexString(), Is.EqualTo(expected));
@@ -111,7 +112,7 @@ public class RadiusCoreTests
     {
         const string expected = "0cda00268a54f4686fb394c52866e302185d062350125a665e2e1e8411f3e243822097c84fa3";
 
-        var packet = new RadiusPacket(PacketCode.StatusServer, 218)
+        var packet = new StatusServer(218)
         {
             Authenticator = Utils.StringToByteArray("8a54f4686fb394c52866e302185d0623")
         };
@@ -128,7 +129,7 @@ public class RadiusCoreTests
     {
         const string expected = "0cb30026925f6b66dd5fed571fcb1db7ad3882605012e8d6eabda910875cd91fdade26367858";
 
-        var packet = new RadiusPacket(PacketCode.StatusServer, 179)
+        var packet = new StatusServer(179)
         {
             Authenticator = Utils.StringToByteArray("925f6b66dd5fed571fcb1db7ad388260")
         };
@@ -144,7 +145,7 @@ public class RadiusCoreTests
     [TestCase]
     public void TestCreateAndParseAccountingRequestPacket()
     {
-        var packet = new RadiusPacket(PacketCode.AccountingRequest, 0);
+        var packet = new AccountingRequest(0);
         packet.AddAttribute("User-Name", "nemo");
         packet.AddAttribute("Acct-Status-Type", 2);
         packet.AddAttribute("NAS-IP-Address", IPAddress.Parse("192.168.1.16"));
@@ -291,7 +292,7 @@ public class RadiusCoreTests
     [TestCase]
     public void TestCreatingAndParsingPacket()
     {
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 1);
+        var packet = new AccessRequest(1);
         packet.AddMessageAuthenticator();
         packet.AddAttribute("User-Name", "test@example.com");
         packet.AddAttribute("User-Password", "test");
@@ -324,7 +325,7 @@ public class RadiusCoreTests
     [TestCase]
     public void TestCreatingMissingAttributes()
     {
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 1);
+        var packet = new AccessRequest(1);
         packet.AddAttribute("User-Name", "test@example.com");
         packet.AddAttribute("User-Password", "test");
 
@@ -374,7 +375,7 @@ public class RadiusCoreTests
     {
         const string expected = "2b0000266613591d86e32fa6dbae94f13772573601066e656d6f0406c0a80110050600000003";
 
-        var packet = new RadiusPacket(PacketCode.CoaRequest, 0)
+        var packet = new CoaRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };
@@ -411,7 +412,7 @@ public class RadiusCoreTests
         var secret = "testing123"u8.ToArray();
 
         var requestAuthenticator = Utils.StringToByteArray("b3e22ff855a690280e6c3444c46e663b");
-        var response = new RadiusPacket(PacketCode.AccessReject, 104);
+        var response = new AccessReject(104);
 
         response.AddAttribute("EAP-Message", Utils.StringToByteArray("04670004"));
         response.AddMessageAuthenticator();
@@ -472,7 +473,7 @@ public class RadiusCoreTests
     [TestCase]
     public void CreatePacketWithEAPMessageValid()
     {
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 0)
+        var packet = new AccessRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };
@@ -488,7 +489,7 @@ public class RadiusCoreTests
     [TestCase]
     public void CreatePacketWithEAPMessageMissingMessageAuthenticator()
     {
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 0)
+        var packet = new AccessRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };
@@ -503,7 +504,7 @@ public class RadiusCoreTests
     [TestCase]
     public void CreatePacketWithEAPMessageInvalidMessageAuthenticator()
     {
-        var packet = new RadiusPacket(PacketCode.AccessRequest, 0)
+        var packet = new AccessRequest(0)
         {
             Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
         };

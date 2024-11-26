@@ -9,8 +9,6 @@ namespace Flexinets.Radius.Core
         byte[] Authenticator { get; }
         PacketCode Code { get; }
 
-        IRadiusPacket CreateResponsePacket(PacketCode responseCode);
-
         T GetAttribute<T>(string name);
 
         List<T> GetAttributes<T>(string name);

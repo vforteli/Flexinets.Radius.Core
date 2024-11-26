@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Flexinets.Radius.Core.PacketTypes;
 
 namespace Flexinets.Radius;
 
@@ -159,16 +160,16 @@ public class RadiusServer(
         // Handle status server requests in server outside packet handler
         // The purpose of status server is to check the _server_ is alive and not 
         // consider packet handlers
-        if (requestPacket.Code == PacketCode.StatusServer)
+        if (requestPacket is StatusServer)
         {
-            var responseCode = serverType == RadiusServerType.Authentication
-                ? PacketCode.AccessAccept
-                : PacketCode.AccountingResponse;
+            IRadiusPacket statusServerResponse = serverType == RadiusServerType.Authentication
+                ? new AccessAccept(requestPacket.Identifier)
+                : new AccessReject(requestPacket.Identifier);
 
             logger.LogDebug("Sending {responseCode} for StatusServer request from {remoteEndpoint}",
-                responseCode, remoteEndpoint);
+                statusServerResponse, remoteEndpoint);
 
-            return requestPacket.CreateResponsePacket(responseCode);
+            return statusServerResponse;
         }
 
         logger.LogDebug("Handling packet for remote ip {remoteEndpoint.Address} with {packetHandler.GetType()}",
@@ -212,7 +213,7 @@ public class RadiusServer(
         await _udpClient.SendAsync(responseBytes, responseBytes.Length, remoteEndpoint);
 
         logger.LogInformation("{responsePacket.Code} sent to {remoteEndpoint} Id={responsePacket.Identifier}",
-            responsePacket.Code, remoteEndpoint, responsePacket.Identifier);
+            responsePacket.GetType(), remoteEndpoint, responsePacket.Identifier);
     }
 
 
