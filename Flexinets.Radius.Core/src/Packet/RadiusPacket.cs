@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace Flexinets.Radius.Core
 {
@@ -16,8 +14,6 @@ namespace Flexinets.Radius.Core
         public byte Identifier { get; internal set; }
         public byte[] Authenticator { get; internal set; } = new byte[16];
         public IDictionary<string, List<object>> Attributes { get; set; } = new Dictionary<string, List<object>>();
-        public byte[] SharedSecret { get; internal set; } = Array.Empty<byte>();
-        public byte[]? RequestAuthenticator { get; internal set; }
 
 
         internal RadiusPacket()
@@ -28,17 +24,15 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Create a new packet with a random authenticator
         /// </summary>
-        public RadiusPacket(PacketCode code, byte identifier, string secret)
+        public RadiusPacket(PacketCode code, byte identifier)
         {
             Code = code;
             Identifier = identifier;
-            SharedSecret = Encoding.UTF8.GetBytes(secret);
 
             // Generate random authenticator for access request packets
             if (Code == PacketCode.AccessRequest || Code == PacketCode.StatusServer)
             {
-                using var csp = RandomNumberGenerator.Create();
-                csp.GetNonZeroBytes(Authenticator);
+                RandomNumberGenerator.Fill(Authenticator);
             }
 
             // A Message authenticator is required in status server packets, calculated last
@@ -56,9 +50,7 @@ namespace Flexinets.Radius.Core
             new RadiusPacket
             {
                 Code = responseCode,
-                SharedSecret = SharedSecret,
                 Identifier = Identifier,
-                RequestAuthenticator = Authenticator
             };
 
 

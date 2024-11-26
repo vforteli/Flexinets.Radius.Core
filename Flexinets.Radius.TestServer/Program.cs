@@ -11,7 +11,7 @@ var loggerFactory = LoggerFactory.Create(o =>
 });
 
 var handlerRepository = new PacketHandlerRepository();
-handlerRepository.AddPacketHandler(IPAddress.Any, new TestPacketHandler(), "xyzzy5461");
+handlerRepository.AddPacketHandler(IPAddress.Any, new TestPacketHandler(), "xyzzy5461"u8.ToArray());
 
 var server = new RadiusServer(
     new UdpClientFactory(),

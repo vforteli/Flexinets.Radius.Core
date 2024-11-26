@@ -140,7 +140,6 @@ namespace Flexinets.Radius.Core
         /// </summary>
         public static bool ValidateMessageAuthenticator(
             byte[] packetBytes,
-            int packetLength,
             int messageAuthenticatorPosition,
             byte[] sharedSecret,
             byte[]? requestAuthenticator)
@@ -148,8 +147,8 @@ namespace Flexinets.Radius.Core
             var messageAuthenticator =
                 packetBytes[(messageAuthenticatorPosition + 2)..(messageAuthenticatorPosition + 16 + 2)];
 
-            var tempPacket = new byte[packetLength];
-            Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);
+            var tempPacket = new byte[packetBytes.Length];
+            Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetBytes.Length);
 
             var calculatedMessageAuthenticator = CalculateMessageAuthenticator(
                 tempPacket,
