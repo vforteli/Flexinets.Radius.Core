@@ -7,10 +7,7 @@ namespace Flexinets.Radius.Core
     {
         byte Identifier { get; }
         byte[] Authenticator { get; }
-        byte[] SharedSecret { get; }
         PacketCode Code { get; }
-        byte[]? RequestAuthenticator { get; }
-        IRadiusPacket CreateResponsePacket(PacketCode responseCode);
 
         T GetAttribute<T>(string name);
 

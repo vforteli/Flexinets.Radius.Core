@@ -1,65 +1,52 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 
-namespace Flexinets.Radius.Core
+namespace Flexinets.Radius.Core.PacketTypes
 {
     /// <summary>
     /// This class encapsulates a Radius packet and presents it in a more readable form
     /// </summary>
-    public class RadiusPacket : IRadiusPacket
+    public abstract class RadiusPacket : IRadiusPacket
     {
         public PacketCode Code { get; internal set; }
         public byte Identifier { get; internal set; }
         public byte[] Authenticator { get; internal set; } = new byte[16];
-        public IDictionary<string, List<object>> Attributes { get; set; } = new Dictionary<string, List<object>>();
-        public byte[] SharedSecret { get; internal set; } = Array.Empty<byte>();
-        public byte[]? RequestAuthenticator { get; internal set; }
+        public IDictionary<string, List<object>> Attributes { get; } = new Dictionary<string, List<object>>();
 
 
-        internal RadiusPacket()
+        internal static RadiusPacket CreateFromCode(PacketCode code) =>
+            code switch
+            {
+                PacketCode.AccessRequest => new AccessRequest(),
+                PacketCode.AccessAccept => new AccessAccept(),
+                PacketCode.AccessReject => new AccessReject(),
+                PacketCode.AccountingRequest => new AccountingRequest(),
+                PacketCode.AccountingResponse => new AccountingResponse(),
+                PacketCode.AccessChallenge => new AccessChallenge(),
+                PacketCode.StatusServer => new StatusServer(),
+                PacketCode.StatusClient => new StatusClient(),
+                PacketCode.DisconnectRequest => new DisconnectRequest(),
+                PacketCode.DisconnectAck => new DisconnectAck(),
+                PacketCode.DisconnectNak => new DisconnectNak(),
+                PacketCode.CoaRequest => new CoaRequest(),
+                PacketCode.CoaAck => new CoaAck(),
+                PacketCode.CoaNak => new CoaNak(),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+
+        protected RadiusPacket()
         {
         }
 
 
-        /// <summary>
-        /// Create a new packet with a random authenticator
-        /// </summary>
-        public RadiusPacket(PacketCode code, byte identifier, string secret)
+        protected RadiusPacket(PacketCode code, byte identifier)
         {
             Code = code;
             Identifier = identifier;
-            SharedSecret = Encoding.UTF8.GetBytes(secret);
-
-            // Generate random authenticator for access request packets
-            if (Code == PacketCode.AccessRequest || Code == PacketCode.StatusServer)
-            {
-                using var csp = RandomNumberGenerator.Create();
-                csp.GetNonZeroBytes(Authenticator);
-            }
-
-            // A Message authenticator is required in status server packets, calculated last
-            if (Code == PacketCode.StatusServer)
-            {
-                AddMessageAuthenticator();
-            }
         }
-
-
-        /// <summary>
-        /// Creates a response packet with code, authenticator, identifier and secret from the request packet.
-        /// </summary>
-        public IRadiusPacket CreateResponsePacket(PacketCode responseCode) =>
-            new RadiusPacket
-            {
-                Code = responseCode,
-                SharedSecret = SharedSecret,
-                Identifier = Identifier,
-                RequestAuthenticator = Authenticator
-            };
 
 
         /// <summary>

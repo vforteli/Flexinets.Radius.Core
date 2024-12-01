@@ -78,10 +78,17 @@ namespace Flexinets.Radius.Core
         /// <param name="packetBytes">Packet bytes with the message authenticator set to zeros</param>
         /// <param name="sharedSecret">Shared secret</param>
         /// <param name="requestAuthenticator">Request authenticator from corresponding request packet</param>
-        /// <param name="index">Position of the message authenticator attribute in the packet bytes</param>
-        public static byte[] CalculateResponseMessageAuthenticator(byte[] packetBytes, byte[] sharedSecret,
-            byte[] requestAuthenticator, int index) =>
-            CalculateMessageAuthenticator(packetBytes, sharedSecret, requestAuthenticator, index);
+        /// <param name="messageAuthenticatorPosition">Position of the message authenticator attribute in the packet bytes</param>
+        public static byte[] CalculateResponseMessageAuthenticator(
+            byte[] packetBytes,
+            byte[] sharedSecret,
+            byte[] requestAuthenticator,
+            int messageAuthenticatorPosition) =>
+            CalculateMessageAuthenticator(
+                packetBytes,
+                sharedSecret,
+                requestAuthenticator,
+                messageAuthenticatorPosition);
 
 
         /// <summary>
@@ -94,20 +101,23 @@ namespace Flexinets.Radius.Core
         /// </summary>
         /// <param name="packetBytes">Packet bytes with the message authenticator set to zeros</param>
         /// <param name="sharedSecret">Shared secret</param>
-        /// <param name="index">Position of the message authenticator attribute in the packet bytes</param>
-        public static byte[] CalculateRequestMessageAuthenticator(byte[] packetBytes, byte[] sharedSecret, int index) =>
-            CalculateMessageAuthenticator(packetBytes, sharedSecret, null, index);
+        /// <param name="messageAuthenticatorPosition">Position of the message authenticator attribute in the packet bytes</param>
+        public static byte[] CalculateRequestMessageAuthenticator(
+            byte[] packetBytes,
+            byte[] sharedSecret,
+            int messageAuthenticatorPosition) =>
+            CalculateMessageAuthenticator(packetBytes, sharedSecret, null, messageAuthenticatorPosition);
 
 
         private static byte[] CalculateMessageAuthenticator(
             byte[] packetBytes,
             byte[] sharedSecret,
             byte[]? requestAuthenticator,
-            int index)
+            int messageAuthenticatorPosition)
         {
             var temp = new byte[packetBytes.Length];
             packetBytes.CopyTo(temp, 0);
-            Buffer.BlockCopy(AuthenticatorZeros, 0, temp, index + 2, AuthenticatorZeros.Length);
+            Buffer.BlockCopy(AuthenticatorZeros, 0, temp, messageAuthenticatorPosition + 2, AuthenticatorZeros.Length);
 
             requestAuthenticator?.CopyTo(temp, 4);
 
@@ -140,7 +150,6 @@ namespace Flexinets.Radius.Core
         /// </summary>
         public static bool ValidateMessageAuthenticator(
             byte[] packetBytes,
-            int packetLength,
             int messageAuthenticatorPosition,
             byte[] sharedSecret,
             byte[]? requestAuthenticator)
@@ -148,8 +157,8 @@ namespace Flexinets.Radius.Core
             var messageAuthenticator =
                 packetBytes[(messageAuthenticatorPosition + 2)..(messageAuthenticatorPosition + 16 + 2)];
 
-            var tempPacket = new byte[packetLength];
-            Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetLength);
+            var tempPacket = new byte[packetBytes.Length];
+            Buffer.BlockCopy(packetBytes, 0, tempPacket, 0, packetBytes.Length);
 
             var calculatedMessageAuthenticator = CalculateMessageAuthenticator(
                 tempPacket,

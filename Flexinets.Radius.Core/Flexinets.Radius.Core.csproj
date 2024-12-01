@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <VersionPrefix>3.0.1</VersionPrefix>
+        <VersionPrefix>4.0.0</VersionPrefix>
         <Title>Flexinets.Radius.Core</Title>
         <Authors>Verner Fortelius</Authors>
         <Description>Library for parsing and assembling radius packets. Includes a dictionary with attributes and some vendor specific attributes</Description>
