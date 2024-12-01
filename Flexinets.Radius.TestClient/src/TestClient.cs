@@ -54,9 +54,11 @@ public class RadiusClient(IPEndPoint localEndpoint, IRadiusPacketParser radiusPa
             throw new InvalidOperationException($"There is already a pending receive with id {packet.Identifier}");
         }
 
-        await _udpClient.SendAsync(radiusPacketParser.GetBytes(packet, sharedSecret), remoteEndpoint);
+        await _udpClient.SendAsync(radiusPacketParser.GetBytes(packet, sharedSecret), remoteEndpoint)
+            .ConfigureAwait(false);
 
-        if (await Task.WhenAny(completionSource.Task, Task.Delay(timeout)) == completionSource.Task)
+        if (await Task.WhenAny(completionSource.Task, Task.Delay(timeout)).ConfigureAwait(false) ==
+            completionSource.Task)
         {
             return radiusPacketParser.Parse(
                 completionSource.Task.Result.Buffer,
@@ -81,7 +83,7 @@ public class RadiusClient(IPEndPoint localEndpoint, IRadiusPacketParser radiusPa
         {
             try
             {
-                var response = await _udpClient.ReceiveAsync(_cancellationTokenSource.Token);
+                var response = await _udpClient.ReceiveAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
                 if (_pendingRequests.TryRemove(
                         new PendingRequest(response.Buffer[1], response.RemoteEndPoint),
                         out var tcs))

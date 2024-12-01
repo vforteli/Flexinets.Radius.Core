@@ -46,7 +46,6 @@ jobs:
           name: nugetpackage
           path: ./**/*.nupkg
 
-        # todo enable again when project has been modernized...
   prerelease:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

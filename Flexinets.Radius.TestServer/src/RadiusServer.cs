@@ -72,8 +72,9 @@ public class RadiusServer(
         {
             try
             {
-                var response = await _udpClient.ReceiveAsync();
-                _ = Task.Factory.StartNew(async () => await HandlePacketAsync(response.RemoteEndPoint, response.Buffer),
+                var response = await _udpClient.ReceiveAsync().ConfigureAwait(false);
+                _ = Task.Factory.StartNew(
+                    async () => await HandlePacketAsync(response.RemoteEndPoint, response.Buffer).ConfigureAwait(false),
                     TaskCreationOptions.LongRunning);
             }
             catch (ObjectDisposedException) // This is thrown when udpclient is disposed, can be safely ignored
@@ -112,7 +113,8 @@ public class RadiusServer(
                     logger.LogDebug(packetBytes.ToHexString());
                 }
 
-                var responsePacket = await GetResponsePacketAsync(handler.packetHandler, requestPacket, remoteEndpoint);
+                var responsePacket = await GetResponsePacketAsync(handler.packetHandler, requestPacket, remoteEndpoint)
+                    .ConfigureAwait(false);
 
                 if (responsePacket != null)
                 {
@@ -120,7 +122,7 @@ public class RadiusServer(
                         responsePacket,
                         remoteEndpoint,
                         handler.sharedSecret,
-                        requestPacket.Authenticator);
+                        requestPacket.Authenticator).ConfigureAwait(false);
                 }
             }
             else
@@ -175,7 +177,7 @@ public class RadiusServer(
             remoteEndpoint.Address, packetHandler.GetType());
 
         var sw = Stopwatch.StartNew();
-        var responsePacket = await packetHandler.HandlePacketAsync(requestPacket);
+        var responsePacket = await packetHandler.HandlePacketAsync(requestPacket).ConfigureAwait(false);
 
         if (responsePacket == null)
         {
@@ -209,7 +211,7 @@ public class RadiusServer(
         ArgumentNullException.ThrowIfNull(_udpClient);
 
         var responseBytes = radiusPacketParser.GetBytes(responsePacket, sharedSecret, requestAuthenticator);
-        await _udpClient.SendAsync(responseBytes, responseBytes.Length, remoteEndpoint);
+        await _udpClient.SendAsync(responseBytes, responseBytes.Length, remoteEndpoint).ConfigureAwait(false);
 
         logger.LogInformation("{responsePacket.Code} sent to {remoteEndpoint} Id={responsePacket.Identifier}",
             responsePacket.Code, remoteEndpoint, responsePacket.Identifier);

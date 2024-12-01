@@ -9,7 +9,7 @@ public class TestPacketHandler : IPacketHandler
 {
     public async Task<IRadiusPacket?> HandlePacketAsync(IRadiusPacket packet)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         
         switch (packet.Code)
         {
