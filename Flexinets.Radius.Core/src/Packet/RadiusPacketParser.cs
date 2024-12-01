@@ -110,7 +110,7 @@ namespace Flexinets.Radius.Core
                 Array.Resize(ref packetBytes, packetLength);
             }
 
-            var packet = RadiusPacket.CreateFromBytes((PacketCode)packetBytes[0]);
+            var packet = RadiusPacket.CreateFromCode((PacketCode)packetBytes[0]);
             packet.Authenticator = packetBytes[4..20];
             packet.Identifier = packetBytes[1];
             packet.Code = (PacketCode)packetBytes[0];
@@ -128,10 +128,17 @@ namespace Flexinets.Radius.Core
         public byte[] GetBytes(IRadiusPacket packet, byte[] sharedSecret, byte[]? requestAuthenticator = null)
         {
             var (attributeBytes, messageAuthenticatorPosition) = GetAttributesBytes(packet, sharedSecret);
+            var length = (ushort)(20 + attributeBytes.Length);
+
+            // Max length is 4096 bytes...
+            // https://datatracker.ietf.org/doc/html/rfc2865#section-3
+            if (length > 4096)
+            {
+                throw new InvalidOperationException($"Packet length cannot exceed 4096, was {length}");
+            }
 
             var packetBytes = new List<byte> { (byte)packet.Code, packet.Identifier }
-                // Populate packet length... Network byte order...
-                .Concat(BitConverter.GetBytes((ushort)(20 + attributeBytes.Length)).Reverse())
+                .Concat(BitConverter.GetBytes(length).Reverse()) // Populate packet length... Network byte order...
                 .Concat(new byte[16]) // Placeholder for authenticator, will be populated later
                 .Concat(attributeBytes) // Populate the attribute value pairs
                 .ToArray();
@@ -144,8 +151,7 @@ namespace Flexinets.Radius.Core
                 case PacketCode.CoaRequest:
                 {
                     HandleRequestMessageAuthenticator(sharedSecret, messageAuthenticatorPosition, packetBytes);
-                    Buffer.BlockCopy(
-                        Utils.CalculateRequestAuthenticator(sharedSecret, packetBytes),
+                    Buffer.BlockCopy(Utils.CalculateRequestAuthenticator(sharedSecret, packetBytes),
                         0, packetBytes, 4, 16);
                     break;
                 }
@@ -266,7 +272,14 @@ namespace Flexinets.Radius.Core
                             $"Unknown attribute {a.Key}, check spelling or dictionary");
                 }
 
-                headerBytes[1] = (byte)(headerBytes.Length + contentBytes.Length);
+                var attributeLength = headerBytes.Length + contentBytes.Length;
+
+                if (attributeLength > byte.MaxValue)
+                {
+                    throw new InvalidOperationException($"Attribute max length is 255, was {attributeLength}");
+                }
+
+                headerBytes[1] = (byte)attributeLength;
                 var attributeBytes = headerBytes.Concat(contentBytes).ToArray();
                 currentPosition += attributeBytes.Length;
                 return attributeBytes;

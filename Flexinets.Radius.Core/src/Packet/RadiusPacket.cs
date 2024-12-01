@@ -16,7 +16,7 @@ namespace Flexinets.Radius.Core.PacketTypes
         public IDictionary<string, List<object>> Attributes { get; } = new Dictionary<string, List<object>>();
 
 
-        internal static RadiusPacket CreateFromBytes(PacketCode code) =>
+        internal static RadiusPacket CreateFromCode(PacketCode code) =>
             code switch
             {
                 PacketCode.AccessRequest => new AccessRequest(),

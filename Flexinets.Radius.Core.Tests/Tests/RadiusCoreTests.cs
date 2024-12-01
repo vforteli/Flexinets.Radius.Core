@@ -517,4 +517,50 @@ public class RadiusCoreTests
 
         Assert.Throws<InvalidMessageAuthenticatorException>(() => RadiusPacketParser.Parse(bytes, DefaultSecret));
     }
+
+    [TestCase]
+    public void CreatePacketOverPacketSizeLimit()
+    {
+        var packet = new AccessRequest(0)
+        {
+            Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
+        };
+        packet.AddMessageAuthenticator();
+        packet.AddAttribute("User-Name", "nemo");
+
+        for (var i = 0; i < 40; i++)
+        {
+            packet.AddAttribute("EAP-Message", new byte[100]);
+        }
+
+        Assert.Throws<InvalidOperationException>(() => RadiusPacketParser.GetBytes(packet, DefaultSecret));
+    }
+
+    [TestCase]
+    public void CreatePacketOverAttributeLimit()
+    {
+        var packet = new AccessRequest(0)
+        {
+            Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
+        };
+        packet.AddMessageAuthenticator();
+        packet.AddAttribute("User-Name", "nemo");
+        packet.AddAttribute("EAP-Message", new byte[253]); // packet header is 2 bytes, so this will be at the limit
+
+        Assert.DoesNotThrow(() => RadiusPacketParser.GetBytes(packet, DefaultSecret));
+    }
+
+    [TestCase]
+    public void CreatePacketOverAttributeSizeLimit()
+    {
+        var packet = new AccessRequest(0)
+        {
+            Authenticator = Utils.StringToByteArray("0f403f9473978057bd83d5cb98f4227a")
+        };
+        packet.AddMessageAuthenticator();
+        packet.AddAttribute("User-Name", "nemo");
+        packet.AddAttribute("EAP-Message", new byte[254]); // packet header is 2 bytes, so this will be one above limit
+
+        Assert.Throws<InvalidOperationException>(() => RadiusPacketParser.GetBytes(packet, DefaultSecret));
+    }
 }

@@ -215,7 +215,7 @@ public class RadiusServer(
         await _udpClient.SendAsync(responseBytes, responseBytes.Length, remoteEndpoint).ConfigureAwait(false);
 
         logger.LogInformation("{responsePacket.Code} sent to {remoteEndpoint} Id={responsePacket.Identifier}",
-            responsePacket.GetType(), remoteEndpoint, responsePacket.Identifier);
+            responsePacket.Code, remoteEndpoint, responsePacket.Identifier);
     }
 
 
