@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Flexinets.Radius.Core
 {
-    public class Attribute
+    public static class Attribute
     {
         /// <summary>
         /// Parses the attribute value and returns an object of some sort

@@ -12,6 +12,8 @@ public class RadiusPasswordTests
     /// </summary>
     [TestCase("123456789")]
     [TestCase("12345678901234567890")]
+    [TestCase("123")]
+    [TestCase("12345678901234567890blablabla")]
     public void PasswordEncryptDecrypt(string password)
     {
         const string authenticator = "1234567890123456";

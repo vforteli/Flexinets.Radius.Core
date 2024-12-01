@@ -11,16 +11,8 @@ namespace Flexinets.Radius.Core
         /// <summary>
         /// Encrypt/decrypt using XOR
         /// </summary>
-        private static byte[] EncryptDecrypt(byte[] input, byte[] key)
-        {
-            var output = new byte[input.Length];
-            for (var i = 0; i < input.Length; i++)
-            {
-                output[i] = (byte)(input[i] ^ key[i]);
-            }
-
-            return output;
-        }
+        private static byte[] EncryptDecrypt(byte[] input, byte[] key) =>
+            input.Zip(key, (v, k) => (byte)(v ^ k)).ToArray();
 
 
         /// <summary>
@@ -38,18 +30,16 @@ namespace Flexinets.Radius.Core
         /// </summary>
         public static string Decrypt(byte[] sharedSecret, byte[] authenticator, byte[] passwordBytes)
         {
-            var sb = new StringBuilder();
             var key = CreateKey(sharedSecret, authenticator);
-
-            for (var n = 1; n <= passwordBytes.Length / 16; n++)
+            var bytes = new List<byte>();
+            for (var n = 0; n < passwordBytes.Length / 16; n++)
             {
-                var temp = new byte[16];
-                Buffer.BlockCopy(passwordBytes, (n - 1) * 16, temp, 0, 16);
-                sb.Append(Encoding.UTF8.GetString(EncryptDecrypt(temp, key)));
-                key = CreateKey(sharedSecret, temp);
+                var chunk = passwordBytes[(n * 16)..(n * 16 + 16)];
+                bytes.AddRange(EncryptDecrypt(chunk, key));
+                key = CreateKey(sharedSecret, chunk);
             }
 
-            return sb.ToString().Replace("\0", "");
+            return Encoding.UTF8.GetString(bytes.ToArray()).Replace("\0", "");
         }
 
 
@@ -58,15 +48,13 @@ namespace Flexinets.Radius.Core
         /// </summary>´
         public static byte[] Encrypt(byte[] sharedSecret, byte[] authenticator, byte[] passwordBytes)
         {
-            Array.Resize(ref passwordBytes, passwordBytes.Length + (16 - (passwordBytes.Length % 16)));
+            Array.Resize(ref passwordBytes, passwordBytes.Length + (16 - passwordBytes.Length % 16));
 
             var key = CreateKey(sharedSecret, authenticator);
             var bytes = new List<byte>();
-            for (var n = 1; n <= passwordBytes.Length / 16; n++)
+            for (var n = 0; n < passwordBytes.Length / 16; n++)
             {
-                var temp = new byte[16];
-                Buffer.BlockCopy(passwordBytes, (n - 1) * 16, temp, 0, 16);
-                var xor = EncryptDecrypt(temp, key);
+                var xor = EncryptDecrypt(passwordBytes[(n * 16)..(n * 16 + 16)], key);
                 bytes.AddRange(xor);
                 key = CreateKey(sharedSecret, xor);
             }
